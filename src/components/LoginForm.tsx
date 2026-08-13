@@ -37,41 +37,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const presets: Array<{ label: string; email: string; pass: string; role: UserRole; name: string }> = [
-    {
-      label: 'Employee',
-      email: 'alex.rivera@koruna.com',
-      pass: 'KorunaLearner2026!',
-      role: 'employee',
-      name: 'Alex Rivera'
-    },
-    {
-      label: 'Team Leader',
-      email: 'sarah.chen@koruna.com',
-      pass: 'KorunaManager2026!',
-      role: 'team_leader',
-      name: 'Sarah Chen'
-    },
-    {
-      label: 'Trainer',
-      email: 'dr.vance@koruna.com',
-      pass: 'KorunaTrainer2026!',
-      role: 'trainer',
-      name: 'Dr. Marcus Vance'
-    },
-    {
-      label: 'Admin',
-      email: 'admin.learning@koruna.com',
-      pass: 'KorunaAdmin2026!',
-      role: 'admin',
-      name: 'Global Admin'
-    }
-  ];
-
-  const handleApplyPreset = (preset: typeof presets[0]) => {
-    setEmail(preset.email);
-    setPassword(preset.pass);
-    setErrorMsg(null);
+  const DEMO_ROLES: Record<string, { name: string; role: UserRole }> = {
+    'alex.rivera@koruna.com': { name: 'Alex Rivera', role: 'employee' },
+    'sarah.chen@koruna.com': { name: 'Sarah Chen', role: 'team_leader' },
+    'dr.vance@koruna.com': { name: 'Dr. Marcus Vance', role: 'trainer' },
+    'admin.learning@koruna.com': { name: 'Global Admin', role: 'admin' }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,11 +72,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
     }
 
     // Check if matched preset for richer demo role display
-    const matchedPreset = presets.find((p) => p.email.toLowerCase() === email.toLowerCase());
+    const matchedRole = DEMO_ROLES[email.toLowerCase()];
 
     onLoginSuccess({
-      name: matchedPreset ? matchedPreset.name : result.data.name,
-      role: matchedPreset ? matchedPreset.role : result.data.role,
+      name: matchedRole ? matchedRole.name : result.data.name,
+      role: matchedRole ? matchedRole.role : result.data.role,
       email: result.data.email
     });
   };
@@ -237,7 +207,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
           onClick={() => setShowDevOptions(!showDevOptions)}
         >
           <Settings size={14} />
-          <span>Demo Credentials & SSO Options</span>
+          <span>SSO & Authentication Options</span>
           {showDevOptions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
 
@@ -246,12 +216,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
             {!isSupabaseConfigured() && (
               <div style={{ padding: '0.6rem 0.8rem', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', borderRadius: '6px', fontSize: '0.75rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Info size={14} style={{ flexShrink: 0 }} />
-                <span>Supabase Demo Mode active. Select a preset chip below to test roles.</span>
+                <span>Supabase Demo Mode active. Use any email address to test the application.</span>
               </div>
             )}
 
             {/* SSO Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <button type="button" className="udemy-sso-btn" onClick={() => handleSSO('azure')} disabled={isLoading} style={{ borderRadius: '6px', margin: 0 }}>
                 <KeyRound size={18} style={{ color: 'var(--emerald-600)' }} />
                 <span>Continue with Koruna SSO</span>
@@ -266,24 +236,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
                 </svg>
                 <span>Continue with Google</span>
               </button>
-            </div>
-
-            {/* Presets Grid */}
-            <div className="udemy-presets" style={{ border: 'none', padding: 0, margin: 0 }}>
-              <div className="udemy-presets-label" style={{ fontSize: '0.7rem', marginBottom: '0.4rem' }}>Quick Role Demo Login</div>
-              <div className="udemy-presets-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                {presets.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className="udemy-preset-chip"
-                    onClick={() => handleApplyPreset(preset)}
-                    style={{ fontSize: '0.68rem', padding: '0.4rem 0.1rem', borderRadius: '4px' }}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         )}
