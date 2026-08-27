@@ -15,6 +15,7 @@ export interface QuizQuestion {
   question: string;
   options: string[];
   correctAnswer: number; // Index of correct option (0-3)
+  moduleTitle?: string;
 }
 
 export interface CourseAssignment {
@@ -741,11 +742,23 @@ const parseAssignedUsers = (val: any): CourseAssignment[] => {
 };
 
 const mapDBCourse = (db: any): Course => {
-  const descVal = db.description || '';
-  let description = descVal;
   let attachments: { name: string; url: string; size: number }[] = [];
   let trainer: string | undefined = undefined;
   let requirements: string[] | undefined = undefined;
+
+  // Read dedicated columns if available
+  if (db.attachments !== undefined && db.attachments !== null) {
+    attachments = typeof db.attachments === 'string' ? JSON.parse(db.attachments) : (db.attachments || []);
+  }
+  if (db.trainer !== undefined && db.trainer !== null) {
+    trainer = db.trainer;
+  }
+  if (db.requirements !== undefined && db.requirements !== null) {
+    requirements = typeof db.requirements === 'string' ? JSON.parse(db.requirements) : (db.requirements || []);
+  }
+
+  const descVal = db.description || '';
+  let description = descVal;
 
   const attachmentsIdx = descVal.indexOf('\n\n[ATTACHMENTS]:');
   const trainerIdx = descVal.indexOf('\n\n[TRAINER]:');
@@ -758,7 +771,8 @@ const mapDBCourse = (db: any): Course => {
     description = descVal.substring(0, minIdx);
   }
 
-  if (attachmentsIdx !== -1) {
+  // Fallback to legacy description parsing if the new columns are empty/undefined
+  if (attachments.length === 0 && attachmentsIdx !== -1) {
     const nextIndices = [trainerIdx, requirementsIdx].filter(i => i > attachmentsIdx);
     const endIdx = nextIndices.length > 0 ? Math.min(...nextIndices) : descVal.length;
     const jsonStr = descVal.substring(attachmentsIdx + '\n\n[ATTACHMENTS]:'.length, endIdx);
@@ -769,13 +783,13 @@ const mapDBCourse = (db: any): Course => {
     }
   }
 
-  if (trainerIdx !== -1) {
+  if (!trainer && trainerIdx !== -1) {
     const nextIndices = [attachmentsIdx, requirementsIdx].filter(i => i > trainerIdx);
     const endIdx = nextIndices.length > 0 ? Math.min(...nextIndices) : descVal.length;
     trainer = descVal.substring(trainerIdx + '\n\n[TRAINER]:'.length, endIdx).trim();
   }
 
-  if (requirementsIdx !== -1) {
+  if ((!requirements || requirements.length === 0) && requirementsIdx !== -1) {
     const nextIndices = [attachmentsIdx, trainerIdx].filter(i => i > requirementsIdx);
     const endIdx = nextIndices.length > 0 ? Math.min(...nextIndices) : descVal.length;
     const jsonStr = descVal.substring(requirementsIdx + '\n\n[REQUIREMENTS]:'.length, endIdx);
@@ -805,16 +819,6 @@ const mapDBCourse = (db: any): Course => {
 };
 
 const mapCourseToDB = (c: Course) => {
-  let descriptionVal = c.description;
-  if (c.attachments && c.attachments.length > 0) {
-    descriptionVal += '\n\n[ATTACHMENTS]:' + JSON.stringify(c.attachments);
-  }
-  if (c.trainer) {
-    descriptionVal += '\n\n[TRAINER]:' + c.trainer;
-  }
-  if (c.requirements && c.requirements.length > 0) {
-    descriptionVal += '\n\n[REQUIREMENTS]:' + JSON.stringify(c.requirements);
-  }
   return {
     id: c.id,
     title: c.title,
@@ -822,11 +826,14 @@ const mapCourseToDB = (c: Course) => {
     rating: c.rating,
     code: c.code,
     level: c.level,
-    description: descriptionVal,
+    description: c.description,
     img_bg: c.imgBg,
     lessons: JSON.stringify(c.lessons),
     quiz: JSON.stringify(c.quiz),
-    assigned_users: c.assignedUsers || []
+    assigned_users: c.assignedUsers || [],
+    attachments: JSON.stringify(c.attachments || []),
+    trainer: c.trainer || null,
+    requirements: JSON.stringify(c.requirements || [])
   };
 };
 

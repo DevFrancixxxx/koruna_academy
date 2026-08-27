@@ -288,8 +288,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
         </button>
 
         <button
-          className="btn-koruna-outline"
-          disabled={activeLessonIdx === studyingCourse.lessons.length - 1}
+          className="btn-koruna-solid"
           onClick={handleNextClick}
           style={{
             display: 'inline-flex',
@@ -301,10 +300,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
             borderRadius: '8px',
             fontSize: '0.9rem',
             fontWeight: 600,
-            cursor: activeLessonIdx === studyingCourse.lessons.length - 1 ? 'not-allowed' : 'pointer'
+            cursor: 'pointer'
           }}
         >
-          Next
+          {activeLessonIdx === studyingCourse.lessons.length - 1 ? 'Take Quiz' : 'Next'}
           <ChevronRight size={16} />
         </button>
       </div>

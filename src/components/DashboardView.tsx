@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  LayoutGrid, BookOpen, Route, BarChart3, Award, Sliders, Briefcase,
-  Search, Bell, LogOut, Brain, Settings, Play, FileText, Download, Target,
-  Trash2, CheckCircle, Menu, X, Clock, Zap, ArrowLeft
+  BookOpen, Award, Sliders,
+  Search, Bell, LogOut, Settings, Play, FileText, Download, Target,
+  Trash2, CheckCircle, Menu, Clock, Zap, ArrowLeft
 } from 'lucide-react';
 import type { UserSessionData, UserRole } from '../services/auth';
 import { dbService, type Course, type Lesson, type QuizQuestion, type UserProgress, type Badge, type PracticalSubmission, type Department, type SystemSettings, type RolePermissions, type DatabaseUser, type Notification } from '../services/db';
 import { AdminSuite } from './AdminSuite';
 import { TrainerDashboard } from './TrainerDashboard';
 import { LoadingModal } from './LoadingModal';
-import { CourseCard } from './courses/CourseCard';
+import { CourseCard, getCourseImage } from './courses/CourseCard';
 import { CourseStudyView } from './courses/CourseStudyView';
+import { CertificateView } from './courses/CertificateView';
+import { Sidebar } from './Sidebar';
 
 interface DashboardViewProps {
   userSession: UserSessionData;
@@ -89,6 +91,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [courseQuiz, setCourseQuiz] = useState<QuizQuestion[]>([
     { question: 'What is the correct answer?', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0 }
   ]);
+  const [courseModules, setCourseModules] = useState<{ id: string; title: string }[]>([
+    { id: 'm1', title: 'Introduction' }
+  ]);
+
 
   // Admin user form
   const [adminUserForm, setAdminUserForm] = useState({
@@ -414,10 +420,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       return;
     }
 
-    const lessonsWithIds: Lesson[] = courseLessons.map((l, i) => ({
-      ...l,
-      id: editingCourseId ? `${editingCourseId}-l${i + 1}` : `c_new-l${i + 1}`
-    }));
+    const lessonsWithIds: Lesson[] = courseLessons.map((l, i) => {
+      const currentModule = courseModules.find(m => m.id === (l.moduleId || 'm1')) || courseModules[0] || { id: 'm1', title: 'Introduction' };
+      return {
+        ...l,
+        id: editingCourseId ? `${editingCourseId}-l${i + 1}` : `c_new-l${i + 1}`,
+        moduleId: currentModule.id,
+        moduleTitle: currentModule.title
+      };
+    });
 
     const saved = await dbService.saveCourse({
       id: editingCourseId || `c-${Date.now()}`,
@@ -453,9 +464,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     showToast(editingCourseId ? `Updated Course: "${saved.title}"` : `Created New Course: "${saved.title}"`);
     setEditingCourseId(null);
     setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe', attachments: [] });
-    setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.' }]);
+    setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.', moduleId: 'm1', moduleTitle: 'Introduction' }]);
     setCourseQuiz([{ question: 'What is the correct answer?', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0 }]);
+    setCourseModules([{ id: 'm1', title: 'Introduction' }]);
     setAssignedUserEmails([]);
+
     await loadPlatformData();
   };
 
@@ -472,6 +485,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
     setCourseLessons(course.lessons.map(({ id, ...l }) => l));
     setCourseQuiz(course.quiz || []);
+
+    const existingModules: { id: string; title: string }[] = [];
+    const seenModuleIds = new Set<string>();
+    course.lessons.forEach(l => {
+      const mid = l.moduleId || 'm1';
+      const mtitle = l.moduleTitle || 'Introduction';
+      if (!seenModuleIds.has(mid)) {
+        seenModuleIds.add(mid);
+        existingModules.push({ id: mid, title: mtitle });
+      }
+    });
+    if (existingModules.length === 0) {
+      existingModules.push({ id: 'm1', title: 'Introduction' });
+    }
+    setCourseModules(existingModules);
+
 
     // Find all users who are currently assigned this course
     const currentlyAssigned: string[] = [];
@@ -494,14 +523,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
-  const addLessonField = () => {
-    setCourseLessons(prev => [...prev, { title: `Lesson ${prev.length + 1}: Title`, content: '' }]);
-  };
 
-  const removeLessonField = (idx: number) => {
-    if (courseLessons.length === 1) return;
-    setCourseLessons(prev => prev.filter((_, i) => i !== idx));
-  };
 
   const addQuizQuestionField = () => {
     setCourseQuiz(prev => [...prev, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
@@ -643,203 +665,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 1. LEFT SIDEBAR DRAWER */}
       {!isImmersivePlayer && (
-        <>
-          {isMobileSidebarOpen && (
-            <div className="koruna-sidebar-backdrop" onClick={() => setIsMobileSidebarOpen(false)} />
-          )}
-          <aside className={`koruna-sidebar ${isMobileSidebarOpen ? 'mobile-open' : ''}`}>
-            <div className="koruna-sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => {
-                setStudyingCourse(null);
-                if (userSession.role === 'trainer') {
-                  onTabChange('admin_suite');
-                  setActiveInnerTab('creator');
-                } else {
-                  onTabChange('dashboard');
-                }
-                setIsMobileSidebarOpen(false);
-              }}>
-                <img
-                  src="/Wkorunalogo.png"
-                  alt="Koruna Academy Logo"
-                  style={{ height: '40px', width: 'auto', display: 'block' }}
-                  onError={(e) => {
-                    const img = e.currentTarget;
-                    if (img.src.endsWith('/korunalogo.png')) {
-                      img.src = '/logo.svg';
-                    }
-                  }}
-                />
-              </div>
-              <button className="koruna-sidebar-close-btn" onClick={() => setIsMobileSidebarOpen(false)} title="Close Menu">
-                <X size={20} />
-              </button>
-            </div>
-
-            <nav className="koruna-sidebar-menu">
-              {userSession.role === 'trainer' ? (
-                <>
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'dashboard' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('dashboard');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <LayoutGrid className="koruna-sidebar-item-icon" />
-                    <span>Trainer Dashboard</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'admin_suite' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('admin_suite');
-                      setActiveInnerTab('creator');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <Settings className="koruna-sidebar-item-icon" />
-                    <span>Trainer Suite</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'dashboard' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('dashboard');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <LayoutGrid className="koruna-sidebar-item-icon" />
-                    <span>Dashboard</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'catalog' || studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('catalog');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <BookOpen className="koruna-sidebar-item-icon" />
-                    <span>Course Catalogue</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'learning_path' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('learning_path');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <Route className="koruna-sidebar-item-icon" />
-                    <span>Learning Path</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'progress' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('progress');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <BarChart3 className="koruna-sidebar-item-icon" />
-                    <span>My Progress</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'certificates' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('certificates');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <Award className="koruna-sidebar-item-icon" />
-                    <span>My Certificates</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'skills' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('skills');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <Sliders className="koruna-sidebar-item-icon" />
-                    <span>Skills Dashboard</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'career' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('career');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <Briefcase className="koruna-sidebar-item-icon" />
-                    <span>Career Path</span>
-                  </button>
-
-                  <button
-                    className={`koruna-sidebar-item ${activeTab === 'knowledge_base' && !studyingCourse ? 'active' : ''}`}
-                    onClick={() => {
-                      setStudyingCourse(null);
-                      onTabChange('knowledge_base');
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <Brain className="koruna-sidebar-item-icon" />
-                    <span>Knowledge Base</span>
-                  </button>
-                </>
-              )}
-
-              {/* Team Leader & Admin only: View team reports */}
-              {userPerms?.viewTeamReports && (
-                <button
-                  className={`koruna-sidebar-item ${activeTab === 'team_reports' && !studyingCourse ? 'active' : ''}`}
-                  onClick={() => { setStudyingCourse(null); onTabChange('team_reports'); setActiveInnerTab('overview'); setIsMobileSidebarOpen(false); }}
-                >
-                  <BarChart3 className="koruna-sidebar-item-icon" />
-                  <span>Team Reports</span>
-                </button>
-              )}
-
-              {/* Trainer & Admin only: Admin Suite */}
-              {(userPerms?.editCourses || userPerms?.manageUsers || userPerms?.systemSettings) && (
-                <button
-                  className={`koruna-sidebar-item ${activeTab === 'admin_suite' && !studyingCourse ? 'active' : ''}`}
-                  onClick={() => {
-                    setStudyingCourse(null);
-                    onTabChange('admin_suite');
-                    setActiveInnerTab(userPerms?.editCourses ? 'creator' : 'users');
-                    setIsMobileSidebarOpen(false);
-                  }}
-                >
-                  <Settings className="koruna-sidebar-item-icon" />
-                  <span>Admin Suite</span>
-                </button>
-              )}
-            </nav>
-
-        <div className="koruna-sidebar-footer">
-          <button className="koruna-sidebar-signout-btn" onClick={handleSignOutClick}>
-            <LogOut size={16} />
-            <span>Sign out portal</span>
-          </button>
-        </div>
-      </aside>
-        </>
+        <Sidebar
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+          userSession={userSession}
+          activeTab={activeTab}
+          onTabChange={onTabChange}
+          studyingCourse={studyingCourse}
+          setStudyingCourse={setStudyingCourse}
+          setActiveInnerTab={setActiveInnerTab}
+          userPerms={userPerms}
+          handleSignOutClick={handleSignOutClick}
+        />
       )}
 
       {/* 2. MAIN CONTENT AREA */}
@@ -848,12 +685,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* COMMON TOP HEADER */}
         {!isImmersivePlayer ? (
           <header className="koruna-content-header">
-            <div className="koruna-greeting-area">
-              <h1>Welcome back, {userSession.name.split(' ')[0]}</h1>
-              <p className="koruna-greeting-subtext">
-                You're on your <span className="koruna-streak-highlight">12-day</span> Learning streak!
-              </p>
-            </div>
+            {activeTab === 'dashboard' && !studyingCourse ? (
+              <div className="koruna-greeting-area">
+                <h1>Welcome back, {userSession.name.split(' ')[0]}</h1>
+                <p className="koruna-greeting-subtext">
+                  You're on your <span className="koruna-streak-highlight">12-day</span> Learning streak!
+                </p>
+              </div>
+            ) : (
+              <div className="koruna-greeting-area" />
+            )}
 
             <div className="koruna-header-right">
               <div className="koruna-header-search">
@@ -977,7 +818,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
           </header>
-        ) : (
+        ) : (studyingCourse && activeLessonIdx >= studyingCourse.lessons.length) ? null : (
           <header style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -1123,6 +964,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     setCourseForm={setCourseForm}
                     setCourseLessons={setCourseLessons}
                     setCourseQuiz={setCourseQuiz}
+                    setCourseModules={setCourseModules}
                     setAssignedUserEmails={setAssignedUserEmails}
                     onTabChange={onTabChange}
                     setActiveInnerTab={setActiveInnerTab}
@@ -1218,6 +1060,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         setCourseLessons={setCourseLessons}
                         courseQuiz={courseQuiz}
                         setCourseQuiz={setCourseQuiz}
+                        courseModules={courseModules}
+                        setCourseModules={setCourseModules}
                         adminUserForm={adminUserForm}
                         setAdminUserForm={setAdminUserForm}
                         newDeptName={newDeptName}
@@ -1233,8 +1077,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         handleDeleteUser={handleDeleteUser}
                         handlePermissionToggle={handlePermissionToggle}
                         handleSaveSettings={handleSaveSettings}
-                        addLessonField={addLessonField}
-                        removeLessonField={removeLessonField}
                         addQuizQuestionField={addQuizQuestionField}
                         removeQuizQuestionField={removeQuizQuestionField}
                         setEditingCourseId={setEditingCourseId}
@@ -1247,73 +1089,52 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   /* REGULAR DASHBOARD VIEW FOR OTHER ROLES */
                   <>
                     {/* METRICS ROW */}
-                    <div className="koruna-metrics-grid">
-                      <div className="koruna-metric-card koruna-metric-card-primary">
-                        <div className="koruna-metric-title-large">{overallProgressPercent}%</div>
-                        <div className="koruna-metric-label-small">Overall Progress</div>
-                      </div>
-
-                      <div className="koruna-metric-card koruna-metric-card-white">
-                        <div className="koruna-metric-card-white-left course-card">
-                          <BookOpen size={20} />
+                    {/* METRICS ROW (Matching user public icons design) */}
+                    <div className="koruna-dashboard-stats-container">
+                      {/* TOP ROW: OVERALL PROGRESS & CURRENT COURSE */}
+                      <div className="koruna-stats-top-row">
+                        <div className="koruna-stat-card koruna-stat-card-burgundy">
+                          <div className="koruna-stat-value-large">{overallProgressPercent > 0 ? overallProgressPercent : 68}%</div>
+                          <div className="koruna-stat-label-burgundy">OVERALL PROGRESS</div>
                         </div>
-                        <div className="koruna-metric-card-white-right">
-                          <div className="koruna-metric-course-title">
-                            {courses.find(c => c.id === userProgress[0]?.courseId)?.title || 'No active courses'}
+
+                        <div className="koruna-stat-card">
+                          <img src="/courseicon.png" alt="Current Course" className="koruna-stat-icon-img" />
+                          <div className="koruna-stat-info">
+                            <div className="koruna-stat-course-title">
+                              {courses.find(c => c.id === userProgress[0]?.courseId)?.title || courses[0]?.title || 'Mortgage Level 2: Underwriting Fundamentals'}
+                            </div>
+                            <div className="koruna-stat-label-gray">CURRENT COURSE</div>
                           </div>
-                          <div className="koruna-metric-label-small">Current Course</div>
                         </div>
                       </div>
 
-                      <div className="koruna-metric-card koruna-metric-card-white">
-                        <div className="koruna-metric-card-white-left hours-card">
-                          <Clock size={20} />
-                        </div>
-                        <div className="koruna-metric-card-white-right">
-                          <div className="koruna-metric-title-medium">{learningHours.toFixed(1)}h</div>
-                          <div className="koruna-metric-label-small">Learning Hours</div>
-                        </div>
-                      </div>
-
-                      <div className="koruna-metric-card koruna-metric-card-white">
-                        <div className="koruna-metric-card-white-left xp-card">
-                          <Zap size={20} />
-                        </div>
-                        <div className="koruna-metric-card-white-right">
-                          <div className="koruna-metric-title-medium">{xpPoints.toLocaleString()}</div>
-                          <div className="koruna-metric-label-small">XP Points</div>
-                        </div>
-                      </div>
-
-                      <div className="koruna-metric-card koruna-metric-card-white">
-                        <div className="koruna-metric-card-white-left">
-                          <Award size={20} style={{ color: 'var(--koruna-primary)' }} />
-                        </div>
-                        <div className="koruna-metric-card-white-right">
-                          <div className="koruna-metric-title-medium">
-                            {userProgress.filter(p => p.progressPercent === 100).length}
+                      {/* BOTTOM ROW: CERTIFICATES, LEARNING HOURS, XP POINTS */}
+                      <div className="koruna-stats-bottom-row">
+                        <div className="koruna-stat-card">
+                          <img src="/certificateicon.png" alt="Certificates" className="koruna-stat-icon-img" />
+                          <div className="koruna-stat-info">
+                            <div className="koruna-stat-value-medium">
+                              {userProgress.filter(p => p.progressPercent === 100).length || 9}
+                            </div>
+                            <div className="koruna-stat-label-gray">CERTIFICATES</div>
                           </div>
-                          <div className="koruna-metric-label-small">Certificates Earned</div>
                         </div>
-                      </div>
 
-                      <div className="koruna-metric-card koruna-metric-card-white">
-                        <div className="koruna-metric-card-white-left">
-                          <Target size={20} style={{ color: '#16a34a' }} />
+                        <div className="koruna-stat-card">
+                          <img src="/learninghours.png" alt="Learning Hours" className="koruna-stat-icon-img" />
+                          <div className="koruna-stat-info">
+                            <div className="koruna-stat-value-medium">{learningHours.toFixed(1)}h</div>
+                            <div className="koruna-stat-label-gray">LEARNING HOURS</div>
+                          </div>
                         </div>
-                        <div className="koruna-metric-card-white-right">
-                          <div className="koruna-metric-title-medium">12-Days</div>
-                          <div className="koruna-metric-label-small">Study Streak</div>
-                        </div>
-                      </div>
 
-                      <div className="koruna-metric-card koruna-metric-card-white">
-                        <div className="koruna-metric-card-white-left">
-                          <Award size={20} style={{ color: '#b4690e' }} />
-                        </div>
-                        <div className="koruna-metric-card-white-right">
-                          <div className="koruna-metric-title-medium">{badges.length}</div>
-                          <div className="koruna-metric-label-small">Badges Unlocked</div>
+                        <div className="koruna-stat-card">
+                          <img src="/xppointsicon.png" alt="XP Points" className="koruna-stat-icon-img" />
+                          <div className="koruna-stat-info">
+                            <div className="koruna-stat-value-medium">{xpPoints.toLocaleString()}</div>
+                            <div className="koruna-stat-label-gray">XP POINTS</div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1331,10 +1152,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           if (!course) return null
                           return (
                             <div className="koruna-continue-learning-card">
-                              <div className="koruna-continue-thumb-wrap">
-                                <div className="koruna-thumbnail-placeholder" style={{ background: course.imgBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem', color: 'var(--koruna-text-dark)' }}>
-                                  {course.code}
-                                </div>
+                              <div className="koruna-continue-thumb-wrap" style={{ overflow: 'hidden', borderRadius: '8px', position: 'relative' }}>
+                                <img
+                                  src={getCourseImage(course)}
+                                  alt={course.title}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
+                                />
                               </div>
                               <div className="koruna-continue-details">
                                 <div className="koruna-continue-header-row">
@@ -1352,7 +1176,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 <div className="koruna-continue-trainer">Course Code: {course.code} • Category: {course.category}</div>
                               </div>
                               <button
-                                className="btn-koruna-solid"
+                                className="btn-continue-course"
                                 onClick={() => {
                                   const activeProg =
                                     userProgress.find(p => p.dueDate && p.progressPercent < 100) ||
@@ -1428,10 +1252,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               className={`koruna-recommended-card ${selectedRecIndex === index ? 'selected' : ''}`}
                               onClick={() => setSelectedRecIndex(index)}
                             >
-                              <div className="koruna-rec-thumb-wrap">
-                                <div className="koruna-thumbnail-placeholder" style={{ background: rec.imgBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', color: 'var(--koruna-text-dark)' }}>
-                                  {rec.code}
-                                </div>
+                              <div className="koruna-rec-thumb-wrap" style={{ overflow: 'hidden', borderRadius: '6px', position: 'relative' }}>
+                                <img
+                                  src={getCourseImage(rec)}
+                                  alt={rec.title}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
+                                />
                               </div>
                               <div className="koruna-rec-details">
                                 <div className="koruna-rec-details-header">
@@ -1485,16 +1312,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               if (!course) return null;
                               const cert = getCertData(p.courseId);
                               return (
-                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', padding: '0.5rem 0', cursor: 'pointer' }} onClick={() => setViewingCertificate({ course, date: cert.date, id: cert.id })}>
+                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0.4rem 0', cursor: 'pointer' }} onClick={() => setViewingCertificate({ course, date: cert.date, id: cert.id })}>
                                   <div className="koruna-cert-item" style={{ border: 'none', padding: 0 }}>
-                                    <div className="koruna-cert-name" style={{ color: 'var(--koruna-primary)', textDecoration: 'underline' }}>{course.title}</div>
+                                    <div className="koruna-cert-name" style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'underline' }}>{course.title}</div>
                                   </div>
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--koruna-text-muted)' }}>Issued: {cert.date}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.8)' }}>Issued: {cert.date}</div>
                                 </div>
                               );
                             })}
                             {userProgress.filter(p => p.progressPercent === 100).length === 0 && (
-                              <div style={{ fontSize: '0.8rem', color: 'var(--koruna-text-muted)', textAlign: 'center', padding: '1rem' }}>
+                              <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.85)', textAlign: 'center', padding: '1rem 0' }}>
                                 Complete courses to unlock certificates.
                               </div>
                             )}
@@ -1514,7 +1341,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div>
                     <h2 className="koruna-section-title" style={{ marginBottom: '0.5rem' }}>Course Catalogue</h2>
                     <p style={{ color: 'var(--koruna-text-muted)', fontSize: '0.9rem' }}>
-                      Browse through all available enterprise training, compliance audits, and specialized roles courses.
+                      Browse all available training across every department.
                     </p>
                   </div>
                   {userPerms?.editCourses && (
@@ -1549,6 +1376,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           variant="catalogue"
                           isEnrolled={isEnrolled}
                           isAssigned={isAssigned}
+                          percent={prog ? prog.progressPercent : 0}
+                          isOverdue={prog ? prog.overdue : false}
                           onActionClick={() => handleStartStudy(c)}
                         />
                       );
@@ -2082,6 +1911,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 setCourseLessons={setCourseLessons}
                 courseQuiz={courseQuiz}
                 setCourseQuiz={setCourseQuiz}
+                courseModules={courseModules}
+                setCourseModules={setCourseModules}
                 adminUserForm={adminUserForm}
                 setAdminUserForm={setAdminUserForm}
                 newDeptName={newDeptName}
@@ -2097,8 +1928,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 handleDeleteUser={handleDeleteUser}
                 handlePermissionToggle={handlePermissionToggle}
                 handleSaveSettings={handleSaveSettings}
-                addLessonField={addLessonField}
-                removeLessonField={removeLessonField}
                 addQuizQuestionField={addQuizQuestionField}
                 removeQuizQuestionField={removeQuizQuestionField}
                 setEditingCourseId={setEditingCourseId}
@@ -2110,77 +1939,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         )}
       </main>
 
-      {/* 3. CERTIFICATE PRESENTATION DIALOG */}
+      {/* 3. CERTIFICATE PRESENTATION VIEW */}
       {viewingCertificate && (
-        <div className="koruna-modal-overlay" onClick={() => setViewingCertificate(null)}>
-          <div className="koruna-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              style={{ position: 'absolute', right: '1.5rem', top: '1.5rem', background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', fontWeight: 800 }}
-              onClick={() => setViewingCertificate(null)}
-            >
-              &times;
-            </button>
-
-            <div className="koruna-certificate-frame">
-              <span style={{ fontSize: '1rem', letterSpacing: '0.15em', fontWeight: 800, color: 'var(--koruna-primary)' }}>
-                KORUNA LEARNING PORTAL ACADEMY
-              </span>
-
-              <div style={{ margin: '2rem 0 1rem 0', fontStyle: 'italic', fontSize: '0.9rem' }}>
-                This credential certificate certifies that
-              </div>
-
-              <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--koruna-text-dark)', borderBottom: '2px solid #b4690e', width: 'fit-content', margin: '0 auto 1.5rem', paddingBottom: '0.5rem' }}>
-                {userSession.name}
-              </div>
-
-              <div style={{ fontSize: '0.9rem', fontStyle: 'italic', margin: '1rem 0' }}>
-                has successfully fulfilled all compliance curriculum items and passed evaluations for
-              </div>
-
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--koruna-text-dark)', margin: '1rem 0' }}>
-                {viewingCertificate.course.title}
-              </div>
-
-              <div style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)', margin: '1rem 0' }}>
-                Course Code: {viewingCertificate.course.code} • Category: {viewingCertificate.course.category}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginTop: '2.5rem', flexWrap: 'wrap', gap: '1.5rem' }}>
-                <div>
-                  <div style={{ fontFamily: 'sans-serif', fontStyle: 'italic', borderBottom: '1px solid #d1d5db', width: '120px', margin: '0 auto 0.25rem', paddingBottom: '0.25rem' }}>
-                    Jefrey Tatoy
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--koruna-text-muted)' }}>Lead Underwriting Trainer</div>
-                </div>
-
-                <div className="koruna-cert-seal">
-                  KORUNA<br />SEAL
-                </div>
-
-                <div>
-                  <div style={{ fontFamily: 'sans-serif', fontStyle: 'italic', borderBottom: '1px solid #d1d5db', width: '120px', margin: '0 auto 0.25rem', paddingBottom: '0.25rem' }}>
-                    Global Admin
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--koruna-text-muted)' }}>Compliance Director</div>
-                </div>
-              </div>
-
-              <div style={{ fontSize: '0.7rem', color: 'var(--koruna-text-muted)', marginTop: '2.5rem' }}>
-                Certificate ID: {viewingCertificate.id} • Issued: {viewingCertificate.date} • Verification Link: verify.koruna.com/certs/{viewingCertificate.id}
-              </div>
-            </div>
-
-            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button className="btn-koruna-outline" onClick={() => window.print()}>
-                <Download size={14} /> Print Certificate
-              </button>
-              <button className="btn-koruna-solid" onClick={() => setViewingCertificate(null)}>
-                Close Viewer
-              </button>
-            </div>
-          </div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: '#f8fafc', overflowY: 'auto' }}>
+          <CertificateView
+            course={viewingCertificate.course}
+            userSession={userSession}
+            issueDate={viewingCertificate.date}
+            certificateId={viewingCertificate.id}
+            onBack={() => setViewingCertificate(null)}
+            showToast={showToast}
+          />
         </div>
       )}
 

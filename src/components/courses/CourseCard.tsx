@@ -2,10 +2,21 @@ import React from 'react';
 import { Edit, ChevronRight } from 'lucide-react';
 import type { Course } from '../../services/db';
 
+export const getCourseImage = (course: Partial<Course> | null | undefined): string => {
+  if (!course) return '/course_card_default.png';
+  if ((course as any).imageUrl) return (course as any).imageUrl;
+  const cat = (course.category || '').toLowerCase();
+  if (cat.includes('mortgage')) return '/course_card_mortgage.png';
+  if (cat.includes('lending')) return '/course_card_lending.png';
+  if (cat.includes('ai') || cat.includes('tech') || cat.includes('digital')) return '/course_card_tech.png';
+  return '/course_card_default.png';
+};
+
 interface CourseCardProps {
   course: Course;
   variant: 'employee' | 'trainer' | 'admin' | 'simple' | 'catalogue';
   percent?: number;
+  isOverdue?: boolean;
   applicationId?: number | null;
   onActionClick?: () => void;
   onEditClick?: () => void;
@@ -18,18 +29,23 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   course,
   variant,
   percent = 0,
+  isOverdue = false,
   applicationId = null,
   onActionClick,
   onEditClick,
-  onDeleteClick,
-  isEnrolled = false,
-  isAssigned = false
+  onDeleteClick
 }) => {
   if (variant === 'employee') {
     return (
       <div className="koruna-assigned-course-card">
-        <div className="koruna-card-thumb-wrap">
-          <div className="koruna-thumbnail-placeholder" style={{ background: course.imgBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem', color: 'var(--koruna-text-dark)' }}>
+        <div className="koruna-card-thumb-wrap" style={{ overflow: 'hidden', borderRadius: '12px 12px 0 0', position: 'relative', height: '140px' }}>
+          <img
+            src={getCourseImage(course)}
+            alt={course.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
+          />
+          <div style={{ position: 'absolute', bottom: '8px', left: '12px', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', padding: '2px 8px', borderRadius: '6px', color: '#ffffff', fontSize: '0.75rem', fontWeight: 700 }}>
             {course.code}
           </div>
         </div>
@@ -50,7 +66,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             <span>{percent}%</span>
           </div>
         </div>
-        <button className="btn-koruna-solid" style={{ marginTop: 'auto' }} onClick={onActionClick}>
+        <button className="btn-assigned-course-action" onClick={onActionClick}>
           {percent === 0 ? 'Start' : 'Continue'}
         </button>
       </div>
@@ -60,8 +76,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   if (variant === 'trainer') {
     return (
       <div className="koruna-assigned-course-card" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div className="koruna-card-thumb-wrap">
-          <div className="koruna-thumbnail-placeholder" style={{ backgroundColor: course.imgBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem', color: 'var(--koruna-text-dark)' }}>
+        <div className="koruna-card-thumb-wrap" style={{ overflow: 'hidden', borderRadius: '12px 12px 0 0', position: 'relative', height: '140px' }}>
+          <img
+            src={getCourseImage(course)}
+            alt={course.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
+          />
+          <div style={{ position: 'absolute', bottom: '8px', left: '12px', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', padding: '2px 8px', borderRadius: '6px', color: '#ffffff', fontSize: '0.75rem', fontWeight: 700 }}>
             {course.code}
           </div>
         </div>
@@ -92,8 +114,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   if (variant === 'admin') {
     return (
       <div className="koruna-assigned-course-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column' }}>
-        <div className="koruna-card-thumb-wrap" style={{ height: '90px' }}>
-          <div className="koruna-thumbnail-placeholder" style={{ backgroundColor: course.imgBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: 'var(--koruna-text-dark)' }}>
+        <div className="koruna-card-thumb-wrap" style={{ overflow: 'hidden', borderRadius: '8px', position: 'relative', height: '90px' }}>
+          <img
+            src={getCourseImage(course)}
+            alt={course.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
+          />
+          <div style={{ position: 'absolute', bottom: '6px', left: '8px', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', padding: '2px 6px', borderRadius: '4px', color: '#ffffff', fontSize: '0.65rem', fontWeight: 700 }}>
             {course.code}
           </div>
         </div>
@@ -115,32 +143,102 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   }
 
   if (variant === 'catalogue') {
+    // 1. Level badge overlay text (UPPERCASE)
+    const levelText = course.level.toUpperCase();
+
+    // 2. Category badge mapping
+    const cat = course.category.toLowerCase();
+    let catBg = '#f4f4f5';
+    let catColor = '#71717a';
+    if (cat.includes('lending')) {
+      catBg = '#e8f5e9';
+      catColor = '#15803d';
+    } else if (cat.includes('mortgage')) {
+      catBg = '#f3e8ff';
+      catColor = '#7e22ce';
+    } else if (cat.includes('operations')) {
+      catBg = '#fdf2f8';
+      catColor = '#aa1555';
+    } else if (cat.includes('ai') || cat.includes('tech')) {
+      catBg = '#e0f2fe';
+      catColor = '#0369a1';
+    }
+    const catText = cat === 'ai' ? 'AI' : course.category.charAt(0).toUpperCase() + course.category.slice(1).toLowerCase();
+
+    // 3. Status badge mapping
+    let statusText = 'Not Started';
+    let statusBg = '#f4f4f5';
+    let statusColor = '#71717a';
+    if (percent === 100) {
+      statusText = 'Completed';
+      statusBg = '#e8f5e9';
+      statusColor = '#2e7d32';
+    } else if (isOverdue) {
+      statusText = 'Overdue';
+      statusBg = '#fee2e2';
+      statusColor = '#dc2626';
+    } else if (percent > 0) {
+      statusText = 'In Progress';
+      statusBg = '#fef3c7';
+      statusColor = '#b45309';
+    }
+
+    // 4. Progress bar class selection
+    const isCompleted = percent === 100;
+    const progressFillClass = isCompleted ? 'completed' : 'active';
+    const percentTextClass = isCompleted ? 'completed' : 'active';
+
+    // 5. Action Button state mapping
+    const isSolidButton = percent > 0 && percent < 100 && !isOverdue;
+    let buttonText = 'Start';
+    if (percent === 100) {
+      buttonText = 'Review';
+    } else if (percent > 0) {
+      buttonText = 'Continue';
+    }
+
     return (
-      <div className="koruna-assigned-course-card">
-        <div className="koruna-card-thumb-wrap">
-          <div className="koruna-thumbnail-placeholder" style={{ backgroundColor: course.imgBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem', color: 'var(--koruna-text-dark)' }}>
-            {course.code}
+      <div className="koruna-catalogue-card">
+        <div className="koruna-catalogue-thumb-wrap" style={{ overflow: 'hidden', position: 'relative', height: '140px' }}>
+          <img
+            src={getCourseImage(course)}
+            alt={course.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
+          />
+          <span className="koruna-catalogue-level-badge">{levelText}</span>
+        </div>
+        
+        <div className="koruna-catalogue-badges-row">
+          <span className="koruna-catalogue-badge" style={{ backgroundColor: catBg, color: catColor }}>
+            {catText}
+          </span>
+          <span className="koruna-catalogue-badge" style={{ backgroundColor: statusBg, color: statusColor }}>
+            {statusText}
+          </span>
+        </div>
+
+        <h3 className="koruna-catalogue-title" title={course.title}>
+          {course.title}
+        </h3>
+
+        <div className="koruna-catalogue-progress-row">
+          <div className="koruna-catalogue-progress-track">
+            <div 
+              className={`koruna-catalogue-progress-fill ${progressFillClass}`} 
+              style={{ width: `${percent}%` }}
+            />
           </div>
+          <span className={`koruna-catalogue-progress-percent ${percentTextClass}`}>
+            {percent}%
+          </span>
         </div>
-        <div className="koruna-card-badges">
-          <span className="koruna-badge-pill koruna-badge-outline-primary">{course.level}</span>
-          <span className="koruna-badge-pill koruna-badge-lending" style={{ textTransform: 'capitalize' }}>{course.category}</span>
-          {isAssigned && (
-            <span className="koruna-badge-pill" style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fee2e2', fontWeight: 800 }}>
-              Assigned
-            </span>
-          )}
-        </div>
-        <h3 className="koruna-assigned-card-title">{course.title}</h3>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--koruna-text-muted)', marginBottom: '0.75rem' }}>
-          <span>Code: {course.code}</span>
-          <span>⭐ {course.rating}</span>
-        </div>
-        <p style={{ fontSize: '0.8rem', color: 'var(--koruna-text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.5rem', marginBottom: '1rem' }}>
-          {course.description}
-        </p>
-        <button className="btn-koruna-solid" style={{ marginTop: 'auto' }} onClick={onActionClick}>
-          {isEnrolled ? 'Open Course' : 'Enroll & Study'}
+
+        <button 
+          className={isSolidButton ? 'btn-catalogue-action-solid' : 'btn-catalogue-action-outline'} 
+          onClick={onActionClick}
+        >
+          {buttonText}
         </button>
       </div>
     );
@@ -149,8 +247,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   // variant === 'simple'
   return (
     <div className="koruna-assigned-course-card" style={{ cursor: 'pointer' }} onClick={onActionClick}>
-      <div style={{ height: '140px', background: course.imgBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--koruna-text-dark)', fontSize: '1.1rem', padding: '1rem', textAlign: 'center', borderRadius: '8px', position: 'relative' }}>
-        {course.code}
+      <div style={{ height: '140px', overflow: 'hidden', borderRadius: '8px', position: 'relative' }}>
+        <img
+          src={getCourseImage(course)}
+          alt={course.title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
+        />
+        <span style={{ position: 'absolute', bottom: '8px', left: '8px', fontSize: '0.75rem', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 700 }}>
+          {course.code}
+        </span>
         {applicationId ? (
           <span style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.65rem', background: '#fae8ff', color: '#a21c5c', padding: '0.2rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
             App ID: {applicationId}
@@ -177,3 +283,4 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     </div>
   );
 };
+

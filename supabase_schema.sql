@@ -86,11 +86,17 @@ CREATE TABLE IF NOT EXISTS public.courses (
   lessons JSONB DEFAULT '[]'::jsonb,
   quiz JSONB DEFAULT '[]'::jsonb,
   assigned_users JSONB DEFAULT '[]'::jsonb,
+  attachments JSONB DEFAULT '[]'::jsonb,
+  trainer TEXT,
+  requirements JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Ensure assigned_users column exists for existing database instances
+-- Ensure columns exist for existing database instances
 ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS assigned_users JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS trainer TEXT;
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS requirements JSONB DEFAULT '[]'::jsonb;
 
 -- Enable RLS for courses
 ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
@@ -195,4 +201,22 @@ CREATE POLICY "Allow read access to notifications" ON public.notifications FOR S
 CREATE POLICY "Allow insert to notifications" ON public.notifications FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow update to notifications" ON public.notifications FOR UPDATE USING (true);
 CREATE POLICY "Allow delete to notifications" ON public.notifications FOR DELETE USING (true);
+
+-- ========================================================
+-- KORUNA ACADEMY - STORAGE SETUP FOR COURSE DOCUMENTS
+-- ========================================================
+
+-- Create the course-documents bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('course-documents', 'course-documents', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies to allow public reads and authenticated uploads/deletes
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Auth Upload" ON storage.objects;
+DROP POLICY IF EXISTS "Auth Delete" ON storage.objects;
+
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'course-documents');
+CREATE POLICY "Auth Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'course-documents');
+CREATE POLICY "Auth Delete" ON storage.objects FOR DELETE USING (bucket_id = 'course-documents');
 

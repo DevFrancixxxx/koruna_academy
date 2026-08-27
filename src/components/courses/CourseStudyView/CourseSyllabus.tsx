@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { Circle, HelpCircle } from 'lucide-react';
 import type { Course, UserProgress, Lesson } from '../../../services/db';
 
 interface CourseSyllabusProps {
@@ -158,7 +158,7 @@ export const CourseSyllabus: React.FC<CourseSyllabusProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden', flex: 1 }}>
                         {/* Circle Status Indicator */}
                         {isLessonDone ? (
-                          <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                          <img src="/done.png" alt="Done" style={{ width: '16px', height: '16px', objectFit: 'contain', flexShrink: 0 }} />
                         ) : isActive ? (
                           <div style={{
                             width: '16px',
@@ -203,6 +203,73 @@ export const CourseSyllabus: React.FC<CourseSyllabusProps> = ({
             </div>
           );
         })}
+
+        {/* FINAL EVALUATION / QUIZ ITEM */}
+        {studyingCourse.quiz && studyingCourse.quiz.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <div style={{
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              color: 'var(--udemy-text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              FINAL ASSESSMENT
+            </div>
+
+            <button
+              onClick={() => setActiveLessonIdx(studyingCourse.lessons.length)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 0.85rem',
+                borderRadius: '10px',
+                border: activeLessonIdx >= studyingCourse.lessons.length ? '2px solid var(--koruna-primary)' : '1px solid var(--udemy-border)',
+                background: activeLessonIdx >= studyingCourse.lessons.length ? '#faf0f4' : '#ffffff',
+                cursor: 'pointer',
+                textAlign: 'left',
+                width: '100%',
+                transition: 'all 0.2s ease',
+                boxShadow: activeLessonIdx >= studyingCourse.lessons.length ? '0 2px 8px rgba(168,44,93,0.12)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (activeLessonIdx < studyingCourse.lessons.length) {
+                  e.currentTarget.style.background = '#f8fafc';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeLessonIdx < studyingCourse.lessons.length) {
+                  e.currentTarget.style.background = '#ffffff';
+                }
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden', flex: 1 }}>
+                <HelpCircle size={18} style={{ color: pinkThemeColor, flexShrink: 0 }} />
+                <span style={{
+                  fontSize: '0.85rem',
+                  fontWeight: activeLessonIdx >= studyingCourse.lessons.length ? 800 : 600,
+                  color: activeLessonIdx >= studyingCourse.lessons.length ? pinkThemeColor : 'var(--udemy-text)',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap'
+                }}>
+                  Course Evaluation Quiz
+                </span>
+              </div>
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: pinkThemeColor,
+                background: '#faf0f4',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px'
+              }}>
+                {studyingCourse.quiz.length} Qs
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

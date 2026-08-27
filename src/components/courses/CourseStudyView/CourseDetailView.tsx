@@ -284,13 +284,13 @@ export const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
                         {/* Status Icon */}
                         {isCompleted && (
-                          <div style={{ color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <CheckCircle2 size={24} style={{ fill: '#dcfce7', color: '#16a34a' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <img src="/done.png" alt="Done" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                           </div>
                         )}
                         {isInProgress && (
-                          <div style={{ color: burgundyThemeColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Play size={22} fill={burgundyThemeColor} />
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <img src="/playbutton.png" alt="Play" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
                           </div>
                         )}
                         {isLocked && (

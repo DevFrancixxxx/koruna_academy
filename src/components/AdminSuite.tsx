@@ -3,6 +3,7 @@ import { Trash2, RefreshCw } from 'lucide-react';
 import type { UserSessionData, UserRole } from '../services/auth';
 import type { Course, Lesson, QuizQuestion, UserProgress, Department, SystemSettings, RolePermissions, DatabaseUser } from '../services/db';
 import { CourseCard } from './courses/CourseCard';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AdminSuiteProps {
   userSession: UserSessionData;
@@ -32,6 +33,8 @@ interface AdminSuiteProps {
   setCourseLessons: React.Dispatch<React.SetStateAction<any[]>>;
   courseQuiz: QuizQuestion[];
   setCourseQuiz: React.Dispatch<React.SetStateAction<QuizQuestion[]>>;
+  courseModules: { id: string; title: string }[];
+  setCourseModules: React.Dispatch<React.SetStateAction<{ id: string; title: string }[]>>;
   adminUserForm: {
     name: string;
     email: string;
@@ -52,8 +55,6 @@ interface AdminSuiteProps {
   handleDeleteUser: (email: string) => Promise<void>;
   handlePermissionToggle: (role: UserRole, permissionKey: keyof RolePermissions['permissions']) => void;
   handleSaveSettings: (updatedSettings: Partial<SystemSettings>) => void;
-  addLessonField: () => void;
-  removeLessonField: (idx: number) => void;
   addQuizQuestionField: () => void;
   removeQuizQuestionField: (idx: number) => void;
   setEditingCourseId: (id: string | null) => void;
@@ -81,6 +82,8 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
   setCourseLessons,
   courseQuiz,
   setCourseQuiz,
+  courseModules,
+  setCourseModules,
   adminUserForm,
   setAdminUserForm,
   newDeptName,
@@ -96,14 +99,13 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
   handleDeleteUser,
   handlePermissionToggle,
   handleSaveSettings,
-  addLessonField,
-  removeLessonField,
   addQuizQuestionField,
   removeQuizQuestionField,
   setEditingCourseId,
   showToast,
   loadPlatformData
 }) => {
+  const [isUploading, setIsUploading] = React.useState(false);
   return (
     <div className="koruna-subview-wrapper">
       <div style={{ marginBottom: '2rem' }}>
@@ -236,27 +238,71 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
                   cursor: 'pointer',
                   position: 'relative'
                 }}>
-                  <input
+                   <input
                     type="file"
                     multiple
-                    onChange={(e) => {
+                    disabled={isUploading}
+                    onChange={async (e) => {
                       const files = e.target.files;
                       if (!files) return;
-                      Array.from(files).forEach(file => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          const fileData = {
-                            name: file.name,
-                            url: reader.result as string,
-                            size: file.size
-                          };
-                          setCourseForm((prev: any) => ({
-                            ...prev,
-                            attachments: [...(prev.attachments || []), fileData]
-                          }));
-                        };
-                        reader.readAsDataURL(file);
-                      });
+                      
+                      setIsUploading(true);
+                      try {
+                        const uploadPromises = Array.from(files).map(async (file) => {
+                          if (isSupabaseConfigured()) {
+                            const fileExt = file.name.split('.').pop();
+                            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+                            const filePath = `course-attachments/${fileName}`;
+                            
+                            const { error } = await supabase.storage
+                              .from('course-documents')
+                              .upload(filePath, file, {
+                                cacheControl: '3600',
+                                upsert: false
+                              });
+                              
+                            if (error) {
+                              console.error('Supabase storage upload failed:', error.message);
+                              throw new Error(`Upload failed for ${file.name}: ${error.message}`);
+                            }
+                            
+                            const { data: urlData } = supabase.storage
+                              .from('course-documents')
+                              .getPublicUrl(filePath);
+                              
+                            return {
+                              name: file.name,
+                              url: urlData.publicUrl,
+                              size: file.size
+                            };
+                          } else {
+                            // Fallback to local Base64 URL (demo mode)
+                            return new Promise<{ name: string; url: string; size: number }>((resolve, reject) => {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                resolve({
+                                  name: file.name,
+                                  url: reader.result as string,
+                                  size: file.size
+                                });
+                              };
+                              reader.onerror = () => reject(new Error('Failed to read file'));
+                              reader.readAsDataURL(file);
+                            });
+                          }
+                        });
+                        
+                        const uploadedFiles = await Promise.all(uploadPromises);
+                        setCourseForm((prev: any) => ({
+                          ...prev,
+                          attachments: [...(prev.attachments || []), ...uploadedFiles]
+                        }));
+                        showToast(`Successfully uploaded ${uploadedFiles.length} file(s).`);
+                      } catch (err: any) {
+                        alert(err.message || 'An error occurred during file upload.');
+                      } finally {
+                        setIsUploading(false);
+                      }
                     }}
                     style={{
                       position: 'absolute',
@@ -265,11 +311,17 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
                       width: '100%',
                       height: '100%',
                       opacity: 0,
-                      cursor: 'pointer'
+                      cursor: isUploading ? 'not-allowed' : 'pointer'
                     }}
                   />
                   <span style={{ fontSize: '0.85rem', color: 'var(--koruna-text-muted)', fontWeight: 600 }}>
-                    📁 Drag & drop resources, or <span style={{ color: 'var(--koruna-primary)', textDecoration: 'underline' }}>browse files</span>
+                    {isUploading ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <RefreshCw size={16} style={{ animation: 'spin 1.2s linear infinite' }} /> Uploading resources... Please wait.
+                      </span>
+                    ) : (
+                      <>📁 Drag & drop resources, or <span style={{ color: 'var(--koruna-primary)', textDecoration: 'underline' }}>browse files</span></>
+                    )}
                   </span>
                 </div>
 
@@ -359,60 +411,203 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
                 </div>
               </div>
 
+              {/* COURSE MODULES EDITOR */}
+              <div style={{ borderTop: '1px solid var(--koruna-border-color)', paddingTop: '1.25rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Course Modules ({courseModules.length})</label>
+                  <button
+                    type="button"
+                    className="btn-koruna-outline"
+                    style={{ height: '28px', padding: '0 0.5rem', fontSize: '0.7rem' }}
+                    onClick={() => {
+                      const nextId = `m${courseModules.length + 1}`;
+                      setCourseModules(prev => [...prev, { id: nextId, title: `Module ${prev.length + 1}` }]);
+                    }}
+                  >
+                    + Add Module
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', paddingRight: '0.5rem', marginBottom: '0.5rem' }}>
+                  {courseModules.map((m) => (
+                    <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--koruna-text-muted)', width: '30px' }}>
+                        {m.id.toUpperCase()}
+                      </span>
+                      <input
+                        type="text"
+                        className="koruna-input-text"
+                        style={{ height: '32px', fontSize: '0.8rem', flex: 1 }}
+                        value={m.title}
+                        placeholder="Module Title"
+                        onChange={(e) => {
+                          const updatedTitle = e.target.value;
+                          // 1. Update module in courseModules list
+                          setCourseModules(prev => prev.map(item => item.id === m.id ? { ...item, title: updatedTitle } : item));
+                          // 2. Update moduleTitle in courseLessons for any lessons matching this moduleId
+                          setCourseLessons(prev => prev.map(l => l.moduleId === m.id ? { ...l, moduleTitle: updatedTitle } : l));
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={courseModules.length === 1}
+                        style={{
+                          color: courseModules.length === 1 ? '#cbd5e1' : '#ef4444',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: courseModules.length === 1 ? 'not-allowed' : 'pointer'
+                        }}
+                        onClick={() => {
+                          if (courseModules.length === 1) return;
+                          
+                          // Find first remaining module to reassign lessons to
+                          const remainingModules = courseModules.filter(item => item.id !== m.id);
+                          const fallbackModule = remainingModules[0];
+                          
+                          // Reassign lessons
+                          setCourseLessons(prev => prev.map(l => {
+                            if (l.moduleId === m.id || !l.moduleId) {
+                              return {
+                                ...l,
+                                moduleId: fallbackModule.id,
+                                moduleTitle: fallbackModule.title
+                              };
+                            }
+                            return l;
+                          }));
+
+                          // Remove module from list
+                          setCourseModules(remainingModules);
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* LESSON EDITOR */}
               <div style={{ borderTop: '1px solid var(--koruna-border-color)', paddingTop: '1.25rem', marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Course Lessons ({courseLessons.length})</label>
-                  <button type="button" className="btn-koruna-outline" style={{ height: '28px', padding: '0 0.5rem', fontSize: '0.7rem' }} onClick={addLessonField}>
-                    + Add Lesson
-                  </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                  {courseLessons.map((l, idx) => (
-                    <div key={idx} style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--koruna-border-color)' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <input
-                          type="text"
-                          className="koruna-input-text"
-                          style={{ height: '32px', fontSize: '0.8rem' }}
-                          value={l.title}
-                          placeholder="Lesson Title"
-                          onChange={(e) => {
-                            const copy = [...courseLessons];
-                            copy[idx].title = e.target.value;
-                            setCourseLessons(copy);
-                          }}
-                        />
-                        <button type="button" style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => removeLessonField(idx)}>
-                          <Trash2 size={16} />
-                        </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                  {courseModules.map((mod) => {
+                    // Filter lessons belonging to this module while retaining their original index
+                    const lessonsWithAbsoluteIndices = courseLessons
+                      .map((lesson, originalIndex) => ({ lesson, originalIndex }))
+                      .filter(item => (item.lesson.moduleId || 'm1') === mod.id);
+
+                    return (
+                      <div key={mod.id} style={{ border: '1px solid var(--koruna-border-color)', borderRadius: '10px', padding: '1rem', background: '#f8fafc' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', borderBottom: '1px solid var(--koruna-border-color)', paddingBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--koruna-primary)', textTransform: 'uppercase' }}>
+                            {mod.id.toUpperCase()} - {mod.title}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-koruna-outline"
+                            style={{ height: '24px', padding: '0 0.5rem', fontSize: '0.65rem' }}
+                            onClick={() => {
+                              setCourseLessons(prev => [
+                                ...prev,
+                                {
+                                  title: `Lesson ${prev.length + 1}: Title`,
+                                  content: '',
+                                  moduleId: mod.id,
+                                  moduleTitle: mod.title
+                                }
+                              ]);
+                            }}
+                          >
+                            + Add Lesson
+                          </button>
+                        </div>
+
+                        {lessonsWithAbsoluteIndices.length === 0 ? (
+                          <div style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--koruna-text-muted)', fontStyle: 'italic' }}>
+                            No lessons in this module. Click "+ Add Lesson" to create one.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {lessonsWithAbsoluteIndices.map(({ lesson, originalIndex }) => (
+                              <div key={originalIndex} style={{ background: '#ffffff', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--koruna-border-color)' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                  <input
+                                    type="text"
+                                    className="koruna-input-text"
+                                    style={{ height: '32px', fontSize: '0.8rem' }}
+                                    value={lesson.title}
+                                    placeholder="Lesson Title"
+                                    onChange={(e) => {
+                                      const copy = [...courseLessons];
+                                      copy[originalIndex].title = e.target.value;
+                                      setCourseLessons(copy);
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                                    onClick={() => {
+                                      setCourseLessons(prev => prev.filter((_, i) => i !== originalIndex));
+                                    }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                  <input
+                                    type="text"
+                                    className="koruna-input-text"
+                                    style={{ height: '32px', fontSize: '0.8rem', width: '100%', margin: 0 }}
+                                    value={lesson.videoUrl || ''}
+                                    placeholder="Video URL (Optional)"
+                                    onChange={(e) => {
+                                      const copy = [...courseLessons];
+                                      copy[originalIndex].videoUrl = e.target.value;
+                                      setCourseLessons(copy);
+                                    }}
+                                  />
+                                  <select
+                                    className="koruna-input-text"
+                                    style={{ height: '32px', fontSize: '0.8rem', padding: '0 0.5rem', width: '100%', margin: 0, border: '1px solid var(--koruna-border-color)', borderRadius: '6px' }}
+                                    value={lesson.moduleId || 'm1'}
+                                    onChange={(e) => {
+                                      const selectedMid = e.target.value;
+                                      const matchedModule = courseModules.find(m => m.id === selectedMid);
+                                      const copy = [...courseLessons];
+                                      copy[originalIndex].moduleId = selectedMid;
+                                      copy[originalIndex].moduleTitle = matchedModule ? matchedModule.title : 'Introduction';
+                                      setCourseLessons(copy);
+                                    }}
+                                  >
+                                    {courseModules.map(m => (
+                                      <option key={m.id} value={m.id}>
+                                        {m.id.toUpperCase()}: {m.title}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <textarea
+                                  className="koruna-textarea"
+                                  style={{ minHeight: '60px', fontSize: '0.8rem' }}
+                                  value={lesson.content}
+                                  placeholder="Enter lesson readings..."
+                                  onChange={(e) => {
+                                    const copy = [...courseLessons];
+                                    copy[originalIndex].content = e.target.value;
+                                    setCourseLessons(copy);
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <input
-                        type="text"
-                        className="koruna-input-text"
-                        style={{ height: '32px', fontSize: '0.8rem', marginBottom: '0.5rem' }}
-                        value={l.videoUrl || ''}
-                        placeholder="Video URL (Optional)"
-                        onChange={(e) => {
-                          const copy = [...courseLessons];
-                          copy[idx].videoUrl = e.target.value;
-                          setCourseLessons(copy);
-                        }}
-                      />
-                      <textarea
-                        className="koruna-textarea"
-                        style={{ minHeight: '60px', fontSize: '0.8rem' }}
-                        value={l.content}
-                        placeholder="Enter lesson readings..."
-                        onChange={(e) => {
-                          const copy = [...courseLessons];
-                          copy[idx].content = e.target.value;
-                          setCourseLessons(copy);
-                        }}
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -488,8 +683,8 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button type="submit" className="btn-koruna-solid">
-                  {editingCourseId ? 'Save Edits' : 'Create Course'}
+                <button type="submit" className="btn-koruna-solid" disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : (editingCourseId ? 'Save Edits' : 'Create Course')}
                 </button>
                 {editingCourseId && (
                   <button

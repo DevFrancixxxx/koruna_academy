@@ -11,6 +11,7 @@ interface TrainerDashboardProps {
   setCourseForm: React.Dispatch<React.SetStateAction<any>>;
   setCourseLessons: React.Dispatch<React.SetStateAction<any[]>>;
   setCourseQuiz: React.Dispatch<React.SetStateAction<any[]>>;
+  setCourseModules: React.Dispatch<React.SetStateAction<any[]>>;
   setAssignedUserEmails: React.Dispatch<React.SetStateAction<string[]>>;
   onTabChange: (tab: string) => void;
   setActiveInnerTab: (tab: string) => void;
@@ -24,6 +25,7 @@ export const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   setCourseForm,
   setCourseLessons,
   setCourseQuiz,
+  setCourseModules,
   setAssignedUserEmails,
   onTabChange,
   setActiveInnerTab
@@ -43,8 +45,9 @@ export const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           onClick={() => {
             setEditingCourseId(null);
             setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe' });
-            setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.' }]);
+            setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.', moduleId: 'm1', moduleTitle: 'Introduction' }]);
             setCourseQuiz([{ question: 'What is the correct answer?', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0 }]);
+            setCourseModules([{ id: 'm1', title: 'Introduction' }]);
             setAssignedUserEmails([]);
             onTabChange('admin_suite');
             setActiveInnerTab('creator');

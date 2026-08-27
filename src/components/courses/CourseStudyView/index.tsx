@@ -77,9 +77,45 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
 
   const isQuizTabActive = activeLessonIdx >= studyingCourse.lessons.length;
 
+  // Standalone Full-Width Quiz View when Quiz tab is active
+  if (isQuizTabActive) {
+    return (
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <QuizViewer
+          studyingCourse={studyingCourse}
+          quizAnswers={quizAnswers}
+          handleQuizAnswer={handleQuizAnswer}
+          quizSubmitted={quizSubmitted}
+          handleQuizSubmit={handleQuizSubmit}
+          quizPassed={quizPassed}
+          quizScore={quizScore}
+          setQuizAnswers={setQuizAnswers}
+          setQuizSubmitted={setQuizSubmitted}
+          settings={settings}
+          setActiveLessonIdx={setActiveLessonIdx}
+          userSession={userSession}
+          showToast={showToast}
+        />
+
+        {/* Renders practical tasks underneath the quiz for MORT-202 (c1 course) */}
+        {studyingCourse.id === 'c1' && (
+          <div style={{ marginTop: '1.5rem' }}>
+            <PracticalTask
+              studyingCourse={studyingCourse}
+              practicalText={practicalText}
+              setPracticalText={setPracticalText}
+              handlePracticalSubmit={handlePracticalSubmit}
+              userProgress={userProgress}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="koruna-subview-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      
+
       {/* Main Two-Column Classroom Layout */}
       <div style={{
         display: 'grid',
@@ -87,44 +123,15 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
         gap: '2rem',
         alignItems: 'start'
       }}>
-        {/* LEFT COLUMN: Main viewport (Lesson or Quiz) */}
+        {/* LEFT COLUMN: Main viewport (Lesson) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {!isQuizTabActive ? (
-            <LessonViewer
-              studyingCourse={studyingCourse}
-              activeLessonIdx={activeLessonIdx}
-              setActiveLessonIdx={setActiveLessonIdx}
-              userProgress={userProgress}
-              handleMarkLessonComplete={handleMarkLessonComplete}
-            />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              <QuizViewer
-                studyingCourse={studyingCourse}
-                quizAnswers={quizAnswers}
-                handleQuizAnswer={handleQuizAnswer}
-                quizSubmitted={quizSubmitted}
-                handleQuizSubmit={handleQuizSubmit}
-                quizPassed={quizPassed}
-                quizScore={quizScore}
-                setQuizAnswers={setQuizAnswers}
-                setQuizSubmitted={setQuizSubmitted}
-                settings={settings}
-                setActiveLessonIdx={setActiveLessonIdx}
-              />
-
-              {/* Renders practical tasks underneath the quiz for MORT-202 (c1 course) */}
-              {studyingCourse.id === 'c1' && (
-                <PracticalTask
-                  studyingCourse={studyingCourse}
-                  practicalText={practicalText}
-                  setPracticalText={setPracticalText}
-                  handlePracticalSubmit={handlePracticalSubmit}
-                  userProgress={userProgress}
-                />
-              )}
-            </div>
-          )}
+          <LessonViewer
+            studyingCourse={studyingCourse}
+            activeLessonIdx={activeLessonIdx}
+            setActiveLessonIdx={setActiveLessonIdx}
+            userProgress={userProgress}
+            handleMarkLessonComplete={handleMarkLessonComplete}
+          />
         </div>
 
         {/* RIGHT COLUMN: Sidebar (Syllabus and Assign module) */}
