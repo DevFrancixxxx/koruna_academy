@@ -1,11 +1,17 @@
+/* ==========================================================================
+   KORUNA ACADEMY - DESIGN SYSTEM & MAIN STYLESHEET
+   ========================================================================== */
+
+/* ==========================================================================
+   1. DESIGN TOKENS & CSS VARIABLES
+   ========================================================================== */
 :root {
-  /* Udemy Color Palette */
+  /* Udemy Brand Palette */
   --udemy-dark: #1c1d1f;
   --udemy-charcoal: #2d2f31;
   --udemy-purple: #a435f0;
   --udemy-purple-hover: #8710d8;
   --udemy-purple-light: #f6e9fe;
-
   --udemy-gray-bg: #f7f9fa;
   --udemy-border: #d1d7dc;
   --udemy-text: #2d2f31;
@@ -13,27 +19,59 @@
   --udemy-white: #ffffff;
   --udemy-star: #b4690e;
 
+  /* Koruna Brand Palette */
+  --koruna-primary: #aa1555;
+  --koruna-primary-hover: #880e43;
+  --koruna-primary-light: #fdf2f8;
+  --koruna-dark-bg: #131316;
+  --koruna-dark-item-active: rgba(175, 31, 96, 0.5);
+  --koruna-dark-item-hover: #232329;
+  --koruna-light-bg: #f9fafb;
+  --koruna-text-dark: #18181b;
+  --koruna-text-muted: #71717a;
+  --koruna-border-color: #e2e8f0;
+  --koruna-card-shadow: 0 2px 8px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+
+  /* Scoped Koruna Auth Tokens */
+  --koruna-bg: #f9fafb;
+  --koruna-input-bg: #eeeeee;
+  --koruna-input-border: transparent;
+  --koruna-text-primary: #111827;
+  --koruna-text-secondary: #4b5563;
+
+  /* Emerald Accent Palette */
   --emerald-500: #10b981;
   --emerald-600: #059669;
   --emerald-700: #047857;
 
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-heading: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  /* Typography */
+  --font-family: 'Plus Jakarta Sans', 'Inter', 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', 'Outfit', 'Inter', sans-serif;
 
+  /* Border Radii */
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
 
+  /* Shadows */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-/* Reset */
+/* ==========================================================================
+   2. BASE RESETS & GLOBAL STYLES
+   ========================================================================== */
 *,
 *::before,
-*::after {
+*::after,
+button,
+input,
+optgroup,
+select,
+textarea {
   box-sizing: border-box;
+  font-family: var(--font-family);
   margin: 0;
   padding: 0;
 }
@@ -46,6 +84,7 @@ body {
   background-color: var(--udemy-white);
   color: var(--udemy-text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -54,16 +93,19 @@ body {
   flex-direction: column;
 }
 
-/* Udemy Navbar */
+/* ==========================================================================
+   3. TOP NAVIGATION & BRAND HEADER
+   ========================================================================== */
 .udemy-nav {
-  height: 72px;
+  height: 48px;
+  margin: 0;
   background: var(--udemy-white);
   border-bottom: 1px solid var(--udemy-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
-  gap: 1.5rem;
+  padding: 0 1.25rem;
+  gap: 1.25rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -132,6 +174,9 @@ body {
   gap: 0.75rem;
 }
 
+/* ==========================================================================
+   4. BUTTON SYSTEM
+   ========================================================================== */
 .btn-udemy-outline {
   height: 40px;
   padding: 0 1.25rem;
@@ -196,7 +241,160 @@ body {
   cursor: not-allowed;
 }
 
-/* Udemy Billboard Hero Section */
+.btn-koruna-solid {
+  background-color: var(--koruna-primary);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-koruna-solid:hover {
+  background-color: var(--koruna-primary-hover);
+}
+
+.btn-koruna-outline {
+  background-color: #ffffff;
+  color: var(--koruna-text-dark);
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid var(--koruna-border-color);
+  border-radius: 6px;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-koruna-outline:hover {
+  background-color: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.btn-continue-course {
+  width: 181px;
+  height: 49px;
+  gap: 10px;
+  opacity: 1;
+  padding: 15px 25px;
+  border-radius: 10px;
+  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%),
+    linear-gradient(270deg, #8557FF -23.33%, #24164D 127.11%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(182, 31, 96, 0.35);
+}
+
+.btn-continue-course:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(182, 31, 96, 0.45);
+}
+
+.btn-assigned-course-action {
+  width: 326px;
+  max-width: 100%;
+  height: 49px;
+  gap: 10px;
+  opacity: 1;
+  padding: 15px 25px;
+  border-radius: 10px;
+  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%),
+    linear-gradient(270deg, #8557FF -23.33%, #24164D 127.11%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(182, 31, 96, 0.35);
+  margin-top: auto;
+  box-sizing: border-box;
+}
+
+.btn-assigned-course-action:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(182, 31, 96, 0.45);
+}
+
+.btn-catalogue-action-solid {
+  width: 326px;
+  max-width: 100%;
+  height: 49px;
+  gap: 10px;
+  opacity: 1;
+  padding: 15px 25px;
+  border-radius: 10px;
+  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%),
+    linear-gradient(270deg, #8557FF -23.33%, #24164D 127.11%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(182, 31, 96, 0.35);
+  box-sizing: border-box;
+  margin-top: auto;
+}
+
+.btn-catalogue-action-solid:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(182, 31, 96, 0.45);
+}
+
+.btn-catalogue-action-outline {
+  width: 326px;
+  max-width: 100%;
+  height: 49px;
+  gap: 10px;
+  padding: 15px 25px;
+  border-radius: 10px;
+  background-color: #ffffff;
+  color: var(--koruna-text-dark);
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid #d4d4d8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  margin-top: auto;
+}
+
+.btn-catalogue-action-outline:hover {
+  background-color: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+/* ==========================================================================
+   5. LANDING & HERO SECTIONS
+   ========================================================================== */
 .udemy-billboard-container {
   max-width: 1340px;
   margin: 1.5rem auto 2.5rem;
@@ -239,7 +437,6 @@ body {
   margin-bottom: 1.25rem;
 }
 
-/* Course Discovery Section */
 .landing-content {
   max-width: 1340px;
   margin: 0 auto;
@@ -260,7 +457,6 @@ body {
   margin-bottom: 1.75rem;
 }
 
-/* Category Filter Pills */
 .category-tabs {
   display: flex;
   align-items: center;
@@ -293,102 +489,6 @@ body {
   border-bottom-color: var(--udemy-dark);
 }
 
-/* Udemy Course Card Grid */
-.course-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.udemy-course-card {
-  background: var(--udemy-white);
-  border: 1px solid var(--udemy-border);
-  display: flex;
-  flex-direction: column;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.udemy-course-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
-}
-
-.course-thumb-box {
-  height: 145px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: var(--udemy-dark);
-  position: relative;
-  padding: 1rem;
-  text-align: center;
-}
-
-.course-badge-tag {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  padding: 0.2rem 0.5rem;
-  border-radius: 2px;
-  background: #eceb97;
-  color: #3d3c0a;
-}
-
-.course-badge-tag.required {
-  background: #fce8e6;
-  color: #c5221f;
-}
-
-.course-badge-tag.bestseller {
-  background: #eceb97;
-  color: #3d3c0a;
-}
-
-.course-body {
-  padding: 0.85rem;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  justify-content: space-between;
-}
-
-.course-title-text {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--udemy-dark);
-  line-height: 1.35;
-  margin-bottom: 0.35rem;
-}
-
-.course-instructor-text {
-  font-size: 0.75rem;
-  color: var(--udemy-text-muted);
-  margin-bottom: 0.4rem;
-}
-
-.course-rating-row {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--udemy-star);
-  margin-bottom: 0.5rem;
-}
-
-.course-access-tag {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--emerald-700);
-}
-
-/* Value Props Banner */
 .udemy-value-props {
   background: var(--udemy-gray-bg);
   border-top: 1px solid var(--udemy-border);
@@ -436,7 +536,9 @@ body {
   line-height: 1.5;
 }
 
-/* Udemy Main Page Layout */
+/* ==========================================================================
+   6. LOGIN & AUTHENTICATION PAGES
+   ========================================================================== */
 .udemy-page-container {
   flex: 1;
   display: flex;
@@ -455,15 +557,6 @@ body {
   gap: 3rem;
 }
 
-@media (max-width: 850px) {
-  .udemy-content-wrapper {
-    flex-direction: column;
-    padding: 1.5rem;
-    align-items: center;
-  }
-}
-
-/* Udemy Login Card */
 .udemy-login-card {
   width: 100%;
   max-width: 440px;
@@ -481,7 +574,6 @@ body {
   line-height: 1.35;
 }
 
-/* Social / SSO Buttons */
 .udemy-sso-btn {
   width: 100%;
   height: 48px;
@@ -524,7 +616,6 @@ body {
   padding: 0 0.75rem;
 }
 
-/* Inputs */
 .udemy-form-group {
   margin-bottom: 1.25rem;
 }
@@ -560,7 +651,6 @@ body {
   cursor: pointer;
 }
 
-/* Presets Bar */
 .udemy-presets {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
@@ -599,7 +689,6 @@ body {
   color: var(--udemy-purple);
 }
 
-/* Udemy Hero Showcase Card */
 .udemy-hero-card {
   flex: 1;
   max-width: 580px;
@@ -661,240 +750,7 @@ body {
   flex-shrink: 0;
 }
 
-/* Udemy Footer */
-.udemy-footer {
-  background: var(--udemy-dark);
-  color: var(--udemy-white);
-  padding: 2.5rem 1.5rem 1.5rem;
-  margin-top: auto;
-  border-top: 1px solid #3e4143;
-}
-
-.udemy-footer-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 2rem;
-}
-
-.udemy-footer-links {
-  display: flex;
-  gap: 4rem;
-  flex-wrap: wrap;
-}
-
-.udemy-footer-col {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.udemy-footer-link {
-  color: var(--udemy-white);
-  text-decoration: none;
-  font-size: 0.85rem;
-  transition: opacity 0.15s ease;
-}
-
-.udemy-footer-link:hover {
-  text-decoration: underline;
-}
-
-.udemy-footer-bottom {
-  max-width: 1200px;
-  margin: 2rem auto 0;
-  padding-top: 1.5rem;
-  border-top: 1px solid #3e4143;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  color: #6a6f73;
-}
-
-/* Premium Loading Modal styles */
-.loading-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw !important;
-  max-width: none !important;
-  height: 100vh !important;
-  background: rgba(28, 29, 31, 0.75);
-  /* Dark charcoal overlay matching --udemy-dark */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-.loading-modal-card {
-  background: var(--udemy-white);
-  padding: 3rem 2.5rem;
-  border-radius: 8px;
-  box-shadow: var(--shadow-lg);
-  max-width: 420px;
-  width: 90%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  border: 1px solid var(--udemy-border);
-  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.loading-spinner-container {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin-bottom: 2rem;
-}
-
-.loading-spinner-ring {
-  box-sizing: border-box;
-  display: block;
-  position: absolute;
-  width: 80px;
-  height: 80px;
-  border: 4px solid var(--udemy-purple-light);
-  border-radius: 50%;
-}
-
-.loading-spinner-segment {
-  box-sizing: border-box;
-  display: block;
-  position: absolute;
-  width: 80px;
-  height: 80px;
-  border: 4px solid transparent;
-  border-top-color: var(--udemy-purple);
-  border-radius: 50%;
-  animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-}
-
-/* Inner pulsing branding icon or detail */
-.loading-spinner-inner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: var(--udemy-purple);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.loading-modal-title {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--udemy-dark);
-  margin-bottom: 0.75rem;
-  font-family: var(--font-heading);
-}
-
-.loading-modal-message {
-  font-size: 0.95rem;
-  color: var(--udemy-text-muted);
-  line-height: 1.5;
-  height: 3rem;
-  /* Fixed height to prevent card layout shift on text change */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Progress bar indicator */
-.loading-progress-track {
-  width: 100%;
-  height: 4px;
-  background: var(--udemy-gray-bg);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 1.5rem;
-}
-
-.loading-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--udemy-purple) 0%, var(--udemy-purple-hover) 100%);
-  width: 0%;
-  border-radius: 2px;
-  animation: progressFill 1.5s linear infinite;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(0.85);
-    opacity: 0.6;
-  }
-
-  50% {
-    transform: translate(-50%, -50%) scale(1.1);
-    opacity: 1;
-  }
-}
-
-@keyframes progressFill {
-  0% {
-    width: 0%;
-  }
-
-  100% {
-    width: 100%;
-  }
-}
-
-/* Scoped Koruna Premium Login Page Styling */
-:root {
-  --koruna-primary: #aa1555;
-  --koruna-primary-hover: #880e43;
-  --koruna-primary-light: #fdf2f8;
-  --koruna-bg: #f9fafb;
-  --koruna-input-bg: #eeeeee;
-  --koruna-input-border: transparent;
-  --koruna-text-primary: #111827;
-  --koruna-text-secondary: #4b5563;
-  --koruna-text-muted: #9ca3af;
-}
-
+/* Koruna Premium Login Page */
 .koruna-login-page {
   display: flex;
   justify-content: center;
@@ -916,27 +772,6 @@ body {
   max-width: 100%;
   height: 100vh;
   align-items: stretch;
-}
-
-@media (max-width: 900px) {
-  .koruna-login-page {
-    height: auto;
-    min-height: 100vh;
-    overflow: auto;
-  }
-
-  .koruna-login-container {
-    grid-template-columns: 1fr;
-    max-width: 480px;
-    height: auto;
-    align-items: center;
-    margin: 0 auto;
-    padding: 3rem 1.5rem 1.5rem;
-  }
-
-  .koruna-login-sidebar-panel {
-    display: none;
-  }
 }
 
 .koruna-login-sidebar-panel {
@@ -970,13 +805,6 @@ body {
 .koruna-login-form-panel>* {
   width: 100%;
   max-width: 420px;
-}
-
-@media (max-width: 900px) {
-  .koruna-login-form-panel {
-    height: auto;
-    padding: 0;
-  }
 }
 
 .koruna-login-logo-container {
@@ -1127,7 +955,6 @@ body {
   cursor: not-allowed;
 }
 
-/* Collapsible panel for developer credentials and SSO */
 .koruna-login-dev-panel {
   margin-top: 1.5rem;
   border-top: 1px solid var(--udemy-border);
@@ -1166,31 +993,9 @@ body {
   z-index: 10;
 }
 
-@media (max-width: 900px) {
-  .koruna-login-back-home {
-    left: 1.5rem;
-    top: 1rem;
-  }
-}
-
-/* ==========================================
-   KORUNA ACADEMY - MODERN DASHBOARD STYLES
-   ========================================== */
-:root {
-  --koruna-primary: #aa1555;
-  --koruna-primary-hover: #880e43;
-  --koruna-primary-light: #fdf2f8;
-  --koruna-dark-bg: #131316;
-  --koruna-dark-item-active: #AF1F6080;
-  --koruna-dark-item-hover: #232329;
-  --koruna-light-bg: #f9fafb;
-  --koruna-text-dark: #18181b;
-  --koruna-text-muted: #71717a;
-  --koruna-border-color: #e4e4e7;
-  --koruna-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-/* Base Layout for Dashboard */
+/* ==========================================================================
+   7. DASHBOARD LAYOUT & SIDEBAR NAVIGATION
+   ========================================================================== */
 .koruna-dashboard-layout {
   display: flex;
   width: 100vw;
@@ -1200,9 +1005,8 @@ body {
   background-color: var(--koruna-light-bg);
 }
 
-/* Sidebar navigation styling */
 .koruna-sidebar {
-  width: 280px;
+  width: 240px;
   height: 100%;
   background-color: var(--koruna-dark-bg);
   display: flex;
@@ -1212,36 +1016,44 @@ body {
   transition: all 0.3s ease;
 }
 
+.koruna-mobile-top-bar {
+  display: none;
+}
+
+.koruna-sidebar-close-btn {
+  display: none;
+}
+
 .koruna-sidebar-header {
-  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  padding: 1.25rem 0.85rem 1rem 0.85rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   border-bottom: 1px solid #1f1f23;
 }
 
 .koruna-sidebar-logo-img {
-  height: 40px;
+  height: 32px;
   width: auto;
 }
 
 .koruna-sidebar-menu {
   flex: 1;
-  padding: 1.5rem 1rem;
+  padding: 0.85rem 0.5rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .koruna-sidebar-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 1rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
   color: #a1a1aa;
   font-family: 'Inter', sans-serif;
-  font-size: 16px;
+  font-size: 13.5px;
   font-weight: 400;
   font-style: normal;
   line-height: 125%;
@@ -1253,7 +1065,16 @@ body {
   background: transparent;
   width: 100%;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: all 0.2s ease;
+}
+
+.koruna-sidebar-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .koruna-sidebar-item:hover {
@@ -1262,20 +1083,20 @@ body {
 }
 
 .koruna-sidebar-item.active {
-  background-color: #AF1F6080;
+  background-color: rgba(175, 31, 96, 0.5);
   color: #ffffff;
   font-weight: 600;
 }
 
 .koruna-sidebar-item-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .koruna-sidebar-footer {
-  padding: 1rem 1.25rem;
+  padding: 0.6rem 0.5rem;
   border-top: 1px solid #1f1f23;
   display: flex;
   align-items: center;
@@ -1298,22 +1119,20 @@ body {
 }
 
 .koruna-sidebar-signout-btn:hover {
-  background-color: #dc262622;
+  background-color: rgba(220, 38, 38, 0.13);
   color: #f87171;
 }
 
-/* Content Container */
 .koruna-dashboard-content {
   flex: 1;
   height: 100%;
   overflow-y: auto;
-  padding: 2rem 2.5rem 3rem 2.5rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0;
 }
 
-/* Header inside Main Content */
 .koruna-content-header {
   display: flex;
   justify-content: space-between;
@@ -1345,33 +1164,114 @@ body {
   gap: 1.25rem;
 }
 
-.koruna-header-search {
+/* Dashboard Search Control */
+.koruna-header-search,
+.koruna-dashboard-search {
   position: relative;
   display: flex;
   align-items: center;
   width: 320px;
+  max-width: 100%;
 }
 
-.koruna-header-search-icon {
+.koruna-header-search-icon,
+.koruna-dashboard-search-icon {
   position: absolute;
   left: 1rem;
   color: var(--koruna-text-muted);
   pointer-events: none;
+  z-index: 1;
 }
 
-.koruna-header-search-input {
+.koruna-header-search-input,
+.koruna-dashboard-search-input {
   width: 100%;
   height: 40px;
   padding: 0 1rem 0 2.75rem;
   border-radius: 9999px;
   border: 1px solid var(--koruna-border-color);
   background-color: #ffffff;
+  font-family: 'Inter', sans-serif;
   font-size: 0.875rem;
+  color: var(--koruna-text-dark);
   outline: none;
   transition: all 0.2s ease;
 }
 
-.koruna-header-search-input:focus {
+.koruna-header-search-input:focus,
+.koruna-dashboard-search-input:focus {
+  border-color: var(--koruna-primary);
+  box-shadow: 0 0 0 2px rgba(170, 21, 85, 0.1);
+}
+
+.koruna-catalog-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 391px;
+  max-width: 100%;
+  height: 46px;
+  gap: 10px;
+  padding: 11px 20px;
+  border-radius: 42px;
+  border: 1px solid var(--koruna-border-color);
+  background-color: #ffffff;
+  box-sizing: border-box;
+  margin-left: 0;
+  transition: all 0.2s ease;
+}
+
+.koruna-catalog-search:focus-within {
+  border-color: var(--koruna-primary);
+  box-shadow: 0 0 0 2px rgba(170, 21, 85, 0.1);
+}
+
+.koruna-catalog-search-icon {
+  color: var(--koruna-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+  order: 1;
+}
+
+.koruna-catalog-search-input {
+  flex: 1;
+  order: 2;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 100%;
+  color: var(--koruna-text-dark);
+  transition: all 0.2s ease;
+}
+
+.koruna-catalog-search-input::placeholder {
+  color: var(--koruna-text-muted);
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+}
+
+.koruna-kb-search-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 1rem 0 3rem;
+  border-radius: 12px;
+  border: 1px solid var(--koruna-border-color);
+  background-color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  color: var(--koruna-text-dark);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.koruna-kb-search-input:focus {
   border-color: var(--koruna-primary);
   box-shadow: 0 0 0 2px rgba(170, 21, 85, 0.1);
 }
@@ -1480,7 +1380,9 @@ body {
   background-color: #f4f4f5;
 }
 
-/* Custom Dashboard Stat Cards (Matching exact design with public icons) */
+/* ==========================================================================
+   8. CARDS, METRICS & STATS SYSTEM
+   ========================================================================== */
 .koruna-dashboard-stats-container {
   display: flex;
   flex-direction: column;
@@ -1523,7 +1425,6 @@ body {
   max-width: 100%;
   height: 128px;
   justify-content: space-between;
-  opacity: 1;
   border-radius: 20px;
   padding: 30px;
   background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%);
@@ -1599,20 +1500,9 @@ body {
   color: #94a3b8;
 }
 
-@media (max-width: 900px) {
-  .koruna-stats-top-row {
-    grid-template-columns: 1fr;
-  }
-
-  .koruna-stats-bottom-row {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  }
-}
-
-/* Legacy Metrics Grid Row fallback */
 .koruna-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1.25rem;
 }
 
@@ -1627,17 +1517,35 @@ body {
 }
 
 .koruna-metric-card-primary {
-  background: linear-gradient(135deg, #a21c5c 0%, #aa1555 100%);
+  background: linear-gradient(135deg, var(--koruna-primary) 0%, #760c38 100%);
   color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(170, 21, 85, 0.2);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.koruna-metric-card-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px 0 rgba(170, 21, 85, 0.3);
 }
 
 .koruna-metric-card-white {
   background-color: #ffffff;
   border: 1px solid var(--koruna-border-color);
-  color: var(--koruna-text-dark);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
   flex-direction: row;
   align-items: center;
   gap: 1rem;
+  min-height: 110px;
+  box-shadow: var(--koruna-card-shadow);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.koruna-metric-card-white:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.01);
+  border-color: rgba(170, 21, 85, 0.2);
 }
 
 .koruna-metric-card-white-left {
@@ -1650,6 +1558,21 @@ body {
   border-radius: 8px;
   color: var(--koruna-primary);
   flex-shrink: 0;
+}
+
+.koruna-metric-card-white-left.course-card {
+  background-color: #fdf2f8;
+  color: #aa1555;
+}
+
+.koruna-metric-card-white-left.hours-card {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+.koruna-metric-card-white-left.xp-card {
+  background-color: #fef9c3;
+  color: #ca8a04;
 }
 
 .koruna-metric-card-white-right {
@@ -1696,7 +1619,9 @@ body {
   line-height: 1.3;
 }
 
-/* Sections Styling */
+/* ==========================================================================
+   9. DASHBOARD SECTIONS & CONTINUED LEARNING
+   ========================================================================== */
 .koruna-dashboard-section {
   display: flex;
   flex-direction: column;
@@ -1710,10 +1635,17 @@ body {
 }
 
 .koruna-section-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--koruna-text-dark);
-  letter-spacing: -0.01em;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 100%;
+}
+
+.koruna-section-description {
+  font-family: var(--font-family);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 140%;
 }
 
 .koruna-section-link {
@@ -1730,7 +1662,6 @@ body {
   text-decoration: underline;
 }
 
-/* Checkerboard thumbnail style */
 .koruna-thumbnail-placeholder {
   width: 100%;
   height: 100%;
@@ -1745,7 +1676,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Continue Learning Banner */
 .koruna-continue-learning-card {
   background-color: #ffffff;
   border: 1px solid var(--koruna-border-color);
@@ -1807,7 +1737,7 @@ body {
 .koruna-assigned-card-progress {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
   width: 100%;
   margin-top: auto;
 }
@@ -1837,104 +1767,10 @@ body {
   color: var(--koruna-text-muted);
 }
 
-.btn-koruna-solid {
-  background-color: var(--koruna-primary);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: none;
-  border-radius: 6px;
-  padding: 0.6rem 1.25rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  white-space: nowrap;
-}
-
-.btn-continue-course {
-  width: 181px;
-  height: 49px;
-  gap: 10px;
-  opacity: 1;
-  padding: 15px 25px;
-  border-radius: 10px;
-  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%),
-    linear-gradient(270deg, #8557FF -23.33%, #24164D 127.11%);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(182, 31, 96, 0.35);
-}
-
-.btn-continue-course:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(182, 31, 96, 0.45);
-}
-
-.btn-assigned-course-action {
-  width: 326px;
-  max-width: 100%;
-  height: 49px;
-  gap: 10px;
-  opacity: 1;
-  padding: 15px 25px;
-  border-radius: 10px;
-  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%),
-    linear-gradient(270deg, #8557FF -23.33%, #24164D 127.11%);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(182, 31, 96, 0.35);
-  margin-top: auto;
-  box-sizing: border-box;
-}
-
-.btn-assigned-course-action:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(182, 31, 96, 0.45);
-}
-
-.btn-koruna-solid:hover {
-  background-color: var(--koruna-primary-hover);
-}
-
-.btn-koruna-outline {
-  background-color: #ffffff;
-  color: var(--koruna-text-dark);
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: 1px solid var(--koruna-border-color);
-  border-radius: 6px;
-  padding: 0.6rem 1.25rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.btn-koruna-outline:hover {
-  background-color: #f4f4f5;
-  border-color: #a1a1aa;
-}
-
 /* Assigned Courses Grid */
 .koruna-assigned-courses-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
 }
 
@@ -1947,12 +1783,13 @@ body {
   flex-direction: column;
   gap: 1rem;
   box-shadow: var(--koruna-card-shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .koruna-assigned-course-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+  border-color: #94a3b8;
 }
 
 .koruna-card-thumb-wrap {
@@ -1988,11 +1825,7 @@ body {
   color: #0369a1;
 }
 
-.koruna-badge-mortgage {
-  background-color: #f3e8ff;
-  color: #7e22ce;
-}
-
+.koruna-badge-mortgage,
 .koruna-badge-leadership {
   background-color: #f3e8ff;
   color: #7e22ce;
@@ -2011,12 +1844,6 @@ body {
   min-height: 2.7rem;
 }
 
-.koruna-assigned-card-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
 /* Bottom Split Layout */
 .koruna-bottom-split {
   display: grid;
@@ -2024,49 +1851,11 @@ body {
   gap: 1.5rem;
 }
 
-.koruna-bottom-left-col {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
+.koruna-bottom-left-col,
 .koruna-bottom-right-col {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-}
-
-/* Recent Certificates Card */
-.koruna-certs-card {
-  width: 540px;
-  max-width: 100%;
-  height: 198px;
-  gap: 15px;
-  opacity: 1;
-  padding: 22px 25px;
-  border-radius: 20px;
-  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%);
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(182, 31, 96, 0.25);
-}
-
-.koruna-certs-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 0.25rem;
-}
-
-.koruna-certs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  overflow-y: auto;
-  flex: 1;
 }
 
 /* Recommended List */
@@ -2097,7 +1886,6 @@ body {
 .koruna-recommended-card.selected {
   border: 2px solid var(--koruna-primary);
   padding: 14px;
-  /* Adjust padding for border thickness difference */
   box-shadow: 0 4px 12px rgba(170, 21, 85, 0.08);
 }
 
@@ -2130,7 +1918,7 @@ body {
   color: var(--koruna-text-muted);
 }
 
-/* Deadline List */
+/* Deadlines & Certificates Cards */
 .koruna-deadlines-card {
   background-color: #ffffff;
   border: 1px solid var(--koruna-border-color);
@@ -2200,27 +1988,35 @@ body {
   color: #0284c7;
 }
 
-/* Certificates Card */
 .koruna-certs-card {
-  background: linear-gradient(135deg, #a21c5c 0%, #aa1555 100%);
+  width: 540px;
+  max-width: 100%;
+  height: 198px;
+  gap: 15px;
+  padding: 22px 25px;
+  border-radius: 20px;
+  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%);
   color: #ffffff;
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: var(--koruna-card-shadow);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(182, 31, 96, 0.25);
 }
 
 .koruna-certs-title {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
 }
 
 .koruna-certs-list {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .koruna-cert-item {
@@ -2239,7 +2035,6 @@ body {
   opacity: 0.85;
 }
 
-/* Full Width Sub-views inside main content */
 .koruna-subview-wrapper {
   background-color: #ffffff;
   border: 1px solid var(--koruna-border-color);
@@ -2270,270 +2065,233 @@ body {
   max-width: 450px;
 }
 
-/* Responsiveness adjustments & Mobile drawer */
-.koruna-mobile-top-bar {
-  display: none;
-}
-
-.koruna-sidebar-close-btn {
-  display: none;
-}
-
-.koruna-sidebar-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(9, 9, 11, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 998;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-.koruna-metric-card-white-left.course-card {
-  background-color: #fdf2f8;
-  color: #aa1555;
-}
-
-.koruna-metric-card-white-left.hours-card {
-  background-color: #e0f2fe;
-  color: #0284c7;
-}
-
-.koruna-metric-card-white-left.xp-card {
-  background-color: #fef9c3;
-  color: #ca8a04;
-}
-
-.koruna-metrics-grid {
+/* ==========================================================================
+   10. COURSE CATALOGUE & LEARNING PATHS
+   ========================================================================== */
+.course-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.25rem;
-}
-
-.koruna-assigned-courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 1.5rem;
 }
 
-.koruna-metric-card-white {
+.udemy-course-card {
+  background: var(--udemy-white);
+  border: 1px solid var(--udemy-border);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.udemy-course-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.course-thumb-box {
+  height: 145px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--udemy-dark);
+  position: relative;
+  padding: 1rem;
+  text-align: center;
+}
+
+.course-badge-tag {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+  background: #eceb97;
+  color: #3d3c0a;
+}
+
+.course-badge-tag.required {
+  background: #fce8e6;
+  color: #c5221f;
+}
+
+.course-badge-tag.bestseller {
+  background: #eceb97;
+  color: #3d3c0a;
+}
+
+.course-body {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.course-title-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--udemy-dark);
+  line-height: 1.35;
+  margin-bottom: 0.35rem;
+}
+
+.course-instructor-text {
+  font-size: 0.75rem;
+  color: var(--udemy-text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.course-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--udemy-star);
+  margin-bottom: 0.5rem;
+}
+
+.course-access-tag {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--emerald-700);
+}
+
+.koruna-catalogue-card {
   background-color: #ffffff;
   border: 1px solid var(--koruna-border-color);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.25rem;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  box-shadow: var(--koruna-card-shadow);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+  position: relative;
+}
+
+.koruna-catalogue-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  border-color: #94a3b8;
+}
+
+.koruna-catalogue-thumb-wrap {
+  width: 100%;
+  height: 140px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.koruna-catalogue-level-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background-color: #ffffff;
+  border: 1px solid var(--koruna-primary);
+  color: var(--koruna-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.koruna-catalogue-badges-row {
+  display: flex;
   align-items: center;
-  gap: 1rem;
-  min-height: 110px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.koruna-metric-card-white:hover {
+.koruna-catalogue-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.koruna-catalogue-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--koruna-text-dark);
+  line-height: 1.4;
+  margin-bottom: 1.25rem;
+  min-height: 2.9rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.koruna-catalogue-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: auto;
+  margin-bottom: 1.25rem;
+}
+
+.koruna-catalogue-progress-track {
+  flex: 1;
+  height: 8px;
+  background-color: #e4e4e7;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.koruna-catalogue-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.koruna-catalogue-progress-fill.completed {
+  background-color: #10b981;
+}
+
+.koruna-catalogue-progress-fill.active {
+  background-color: var(--koruna-primary);
+}
+
+.koruna-catalogue-progress-percent {
+  font-size: 0.85rem;
+  font-weight: 700;
+  width: 36px;
+  text-align: right;
+}
+
+.koruna-catalogue-progress-percent.completed {
+  color: #10b981;
+}
+
+.koruna-catalogue-progress-percent.active {
+  color: var(--koruna-text-dark);
+}
+
+.learning-path-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.learning-path-card.clickable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.01);
-  border-color: rgba(170, 21, 85, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+  border-color: #cbd5e1 !important;
 }
 
-.koruna-metric-card-primary {
-  background: linear-gradient(135deg, var(--koruna-primary) 0%, #760c38 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 14px 0 rgba(170, 21, 85, 0.2);
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.koruna-metric-card-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px 0 rgba(170, 21, 85, 0.3);
-}
-
-/* Fluid responsive setups */
-@media (max-width: 1024px) {
-  .koruna-dashboard-layout {
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-  }
-
-  .koruna-mobile-top-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
-    background-color: var(--koruna-dark-bg);
-    border-bottom: 1px solid #1f1f23;
-    padding: 0 1.25rem;
-    z-index: 99;
-    flex-shrink: 0;
-  }
-
-  .koruna-hamburger-btn {
-    background: transparent;
-    border: none;
-    color: #e4e4e7;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    border-radius: 6px;
-    transition: background-color 0.2s;
-  }
-
-  .koruna-hamburger-btn:hover {
-    background-color: #232329;
-  }
-
-  .koruna-mobile-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .koruna-mobile-bell-btn {
-    background: transparent;
-    border: none;
-    color: #e4e4e7;
-    cursor: pointer;
-    position: relative;
-    padding: 0.5rem;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-  }
-
-  .koruna-mobile-bell-btn:hover {
-    background-color: #232329;
-  }
-
-  .koruna-mobile-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: var(--koruna-primary);
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    border: 2px solid #ffffff33;
-  }
-
-  .koruna-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 280px;
-    height: 100%;
-    z-index: 1000;
-    transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-right: 1px solid #1f1f23;
-  }
-
-  .koruna-sidebar.mobile-open {
-    transform: translateX(0);
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
-  }
-
-  .koruna-sidebar-close-btn {
-    display: flex;
-    background: transparent;
-    border: none;
-    color: #a1a1aa;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 6px;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s, color 0.2s;
-  }
-
-  .koruna-sidebar-close-btn:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #ffffff;
-  }
-
-  .koruna-sidebar-menu {
-    flex-direction: column;
-    overflow-y: auto;
-    padding: 1.5rem 1rem;
-  }
-
-  .koruna-sidebar-item {
-    white-space: normal;
-    width: 100%;
-  }
-
-  .koruna-dashboard-content {
-    height: calc(100vh - 60px);
-    overflow-y: auto;
-    padding: 1.25rem 1.25rem 2.5rem 1.25rem;
-  }
-
-  .koruna-bottom-split {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .koruna-metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .koruna-assigned-courses-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .koruna-continue-learning-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .koruna-continue-thumb-wrap {
-    width: 100%;
-    height: 140px;
-  }
-
-  .koruna-content-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .koruna-header-search {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .koruna-metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .koruna-content-header h1 {
-    font-size: 1.5rem;
-  }
-}
-
-/* ========================================================
-   KORUNA ACADEMY - EXPANDED USER ROLES PREMIUM STYLING
-   ======================================================== */
-
-/* Immersive Course Content Study View */
+/* ==========================================================================
+   11. IMMERSIVE STUDY VIEWER & INTERACTIVE MODULES
+   ========================================================================== */
 .koruna-study-viewer {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -2542,12 +2300,6 @@ body {
   padding: 1.5rem;
   border-radius: 12px;
   animation: fadeIn 0.3s ease;
-}
-
-@media (max-width: 1024px) {
-  .koruna-study-viewer {
-    grid-template-columns: 1fr;
-  }
 }
 
 .koruna-study-left {
@@ -2568,7 +2320,6 @@ body {
   box-shadow: var(--koruna-card-shadow);
 }
 
-/* Custom Video Player Container */
 .koruna-video-wrapper {
   position: relative;
   width: 100%;
@@ -2585,7 +2336,6 @@ body {
   object-fit: cover;
 }
 
-/* Immersive Quiz Component */
 .koruna-quiz-card {
   background: #ffffff;
   border: 1px solid var(--koruna-border-color);
@@ -2648,7 +2398,6 @@ body {
   color: #7f1d1d;
 }
 
-/* Premium Badge styling */
 .koruna-badge-showcase-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -2700,32 +2449,6 @@ body {
   line-height: 1.35;
 }
 
-/* Certificate Preview Modal */
-.koruna-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.koruna-modal-content {
-  background: #ffffff;
-  border-radius: 16px;
-  max-width: 800px;
-  width: 90%;
-  padding: 2rem;
-  position: relative;
-  box-shadow: var(--shadow-lg);
-  animation: modalSlide 0.3s ease;
-}
-
 .koruna-certificate-frame {
   border: 12px double #b4690e;
   padding: 2rem;
@@ -2752,7 +2475,6 @@ body {
   text-transform: uppercase;
 }
 
-/* Administration Permission Matrix Table */
 .koruna-matrix-table {
   width: 100%;
   border-collapse: collapse;
@@ -2780,18 +2502,11 @@ body {
   cursor: pointer;
 }
 
-/* Premium Form Grouping */
 .koruna-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
   margin-bottom: 1.25rem;
-}
-
-@media (max-width: 640px) {
-  .koruna-form-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .koruna-form-control {
@@ -2837,7 +2552,6 @@ body {
   box-shadow: 0 0 0 3px rgba(170, 21, 85, 0.15);
 }
 
-/* Dashboard Inner Tabs */
 .koruna-inner-tab-bar {
   display: flex;
   gap: 0.5rem;
@@ -2869,32 +2583,138 @@ body {
   border-bottom-color: var(--koruna-primary);
 }
 
-/* Keyframes */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
+/* ==========================================================================
+   12. KNOWLEDGE BASE & KORUNA LIFE PORTAL
+   ========================================================================== */
+.koruna-life-pillar-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-  to {
+.koruna-life-pillar-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.koruna-kb-card {
+  transition: all 0.2s ease;
+}
+
+.koruna-kb-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
+  border-color: var(--udemy-purple) !important;
+}
+
+/* ==========================================================================
+   13. MODALS, NOTIFICATIONS & OVERLAYS
+   ========================================================================== */
+.loading-modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100vh !important;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+.loading-modal-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.loading-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 10px 28px rgba(175, 31, 96, 0.28));
+  animation: korunaPulseFloat 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, filter;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.loading-logo-icon svg {
+  shape-rendering: geometricPrecision;
+  text-rendering: optimizeLegibility;
+}
+
+@keyframes korunaPulseFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1) translateZ(0);
+    opacity: 0.95;
+    filter: drop-shadow(0 10px 28px rgba(175, 31, 96, 0.25));
+  }
+  50% {
+    transform: translateY(-7px) scale(1.04) translateZ(0);
     opacity: 1;
-    transform: translateY(0);
+    filter: drop-shadow(0 16px 36px rgba(175, 31, 96, 0.42));
   }
 }
 
-@keyframes modalSlide {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.loading-text-label {
+  font-family: var(--font-heading, system-ui, -apple-system, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: -0.01em;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.45rem 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(175, 31, 96, 0.12);
+  box-shadow: 0 4px 14px rgba(175, 31, 96, 0.08);
+  animation: fadeIn 0.35s ease-out forwards;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* Notifications Dropdown */
+.koruna-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.koruna-modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 800px;
+  width: 90%;
+  padding: 2rem;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+  animation: modalSlide 0.3s ease;
+}
+
+.koruna-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(9, 9, 11, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+  animation: fadeIn 0.2s ease;
+}
+
 .koruna-notifications-dropdown {
   position: absolute;
   top: 48px;
@@ -3070,179 +2890,405 @@ body {
   font-weight: 500;
 }
 
-/* ==========================================================
-   REDESIGNED COURSE CATALOGUE CARD STYLES
-   ========================================================== */
+.udemy-footer {
+  background: var(--udemy-dark);
+  color: var(--udemy-white);
+  padding: 2.5rem 1.5rem 1.5rem;
+  margin-top: auto;
+  border-top: 1px solid #3e4143;
+}
 
-.koruna-catalogue-card {
-  background-color: #ffffff;
-  border: 1px solid var(--koruna-border-color);
-  border-radius: 16px;
-  padding: 1.25rem;
+.udemy-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
-  flex-direction: column;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.01);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 2rem;
 }
 
-.koruna-catalogue-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.06), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-}
-
-.koruna-catalogue-thumb-wrap {
-  width: 100%;
-  height: 140px;
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 1rem;
-}
-
-.koruna-catalogue-level-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background-color: #ffffff;
-  border: 1px solid var(--koruna-primary);
-  color: var(--koruna-primary);
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  letter-spacing: 0.05em;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.koruna-catalogue-badges-row {
+.udemy-footer-links {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: 4rem;
   flex-wrap: wrap;
 }
 
-.koruna-catalogue-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
-}
-
-.koruna-catalogue-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--koruna-text-dark);
-  line-height: 1.4;
-  margin-bottom: 1.25rem;
-  min-height: 2.9rem;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.koruna-catalogue-progress-row {
+.udemy-footer-col {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: auto;
-  margin-bottom: 1.25rem;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.koruna-catalogue-progress-track {
-  flex: 1;
-  height: 8px;
-  background-color: #e4e4e7;
-  border-radius: 9999px;
-  overflow: hidden;
-}
-
-.koruna-catalogue-progress-fill {
-  height: 100%;
-  border-radius: 9999px;
-  transition: width 0.3s ease;
-}
-
-.koruna-catalogue-progress-fill.completed {
-  background-color: #10b981;
-}
-
-.koruna-catalogue-progress-fill.active {
-  background-color: var(--koruna-primary);
-}
-
-.koruna-catalogue-progress-percent {
+.udemy-footer-link {
+  color: var(--udemy-white);
+  text-decoration: none;
   font-size: 0.85rem;
-  font-weight: 700;
-  width: 36px;
-  text-align: right;
+  transition: opacity 0.15s ease;
 }
 
-.koruna-catalogue-progress-percent.completed {
-  color: #10b981;
+.udemy-footer-link:hover {
+  text-decoration: underline;
 }
 
-.koruna-catalogue-progress-percent.active {
-  color: var(--koruna-text-dark);
-}
-
-.btn-catalogue-action-solid {
-  width: 326px;
-  max-width: 100%;
-  height: 49px;
-  gap: 10px;
-  opacity: 1;
-  padding: 15px 25px;
-  border-radius: 10px;
-  background: linear-gradient(257.07deg, #B61F60 15.92%, #80084E 95.56%),
-    linear-gradient(270deg, #8557FF -23.33%, #24164D 127.11%);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: none;
+.udemy-footer-bottom {
+  max-width: 1200px;
+  margin: 2rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid #3e4143;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(182, 31, 96, 0.35);
-  box-sizing: border-box;
-  margin-top: auto;
+  font-size: 0.75rem;
+  color: #6a6f73;
 }
 
-.btn-catalogue-action-solid:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(182, 31, 96, 0.45);
+/* ==========================================================================
+   14. KEYFRAME ANIMATIONS
+   ========================================================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
-.btn-catalogue-action-outline {
-  width: 326px;
-  max-width: 100%;
-  height: 49px;
-  gap: 10px;
-  padding: 15px 25px;
-  border-radius: 10px;
-  background-color: #ffffff;
-  color: var(--koruna-text-dark);
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: 1px solid #d4d4d8;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-  margin-top: auto;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.btn-catalogue-action-outline:hover {
-  background-color: #f4f4f5;
-  border-color: #a1a1aa;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes progressFill {
+  0% {
+    width: 0%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes modalSlide {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+   15. RESPONSIVE BREAKPOINTS & MEDIA QUERIES
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .koruna-dashboard-layout {
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .koruna-mobile-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--koruna-dark-bg);
+    border-bottom: 1px solid #1f1f23;
+    padding: 0 1rem;
+    flex-shrink: 0;
+  }
+
+  .koruna-hamburger-btn {
+    background: transparent;
+    border: none;
+    color: #e4e4e7;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+  }
+
+  .koruna-hamburger-btn:hover {
+    background-color: #232329;
+  }
+
+  .koruna-mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .koruna-mobile-bell-btn {
+    background: transparent;
+    border: none;
+    color: #e4e4e7;
+    cursor: pointer;
+    position: relative;
+    padding: 0.5rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+  }
+
+  .koruna-mobile-bell-btn:hover {
+    background-color: #232329;
+  }
+
+  .koruna-mobile-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--koruna-primary);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .koruna-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 250px;
+    height: 100%;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: 1px solid #1f1f23;
+  }
+
+  .koruna-sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+  }
+
+  .koruna-sidebar-close-btn {
+    display: flex;
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .koruna-sidebar-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+  }
+
+  .koruna-sidebar-menu {
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 1.5rem 1rem;
+  }
+
+  .koruna-sidebar-item {
+    white-space: normal;
+    width: 100%;
+  }
+
+  .kh-header {
+    display: none !important;
+  }
+
+  .koruna-dashboard-content {
+    height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .koruna-bottom-split {
+    grid-template-columns: 1fr;
+  }
+
+  .koruna-study-viewer {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .koruna-login-page {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .koruna-login-container {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    height: auto;
+    align-items: center;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 1.5rem;
+  }
+
+  .koruna-login-sidebar-panel {
+    display: none;
+  }
+
+  .koruna-login-form-panel {
+    height: auto;
+    padding: 0;
+  }
+
+  .koruna-login-back-home {
+    left: 1.5rem;
+    top: 1rem;
+  }
+
+  .koruna-stats-top-row {
+    grid-template-columns: 1fr;
+  }
+
+  .koruna-stats-bottom-row {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 850px) {
+  .udemy-content-wrapper {
+    flex-direction: column;
+    padding: 1.5rem;
+    align-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .koruna-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .koruna-assigned-courses-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .koruna-continue-learning-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .koruna-continue-thumb-wrap {
+    width: 100%;
+    height: 140px;
+  }
+
+  .koruna-content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .koruna-header-search {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .koruna-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .koruna-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .koruna-content-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .koruna-home-feed {
+    gap: 1rem;
+  }
+
+  .koruna-home-card {
+    border-radius: 10px;
+  }
+
+  .koruna-post-header {
+    padding-bottom: 0.875rem;
+    border-bottom-width: 1px;
+  }
+
+  .koruna-post-body {
+    margin-top: 0.75rem;
+  }
+
+  .koruna-post-actions {
+    padding-top: 0.75rem;
+  }
+
+  .koruna-composer {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .koruna-recognition-input {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  .koruna-search-input {
+    padding: 0.875rem 1rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+  }
+
+  .koruna-notification-item {
+    padding: 0.875rem;
+    border-radius: 10px;
+  }
 }

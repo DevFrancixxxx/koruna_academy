@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Award, AlertTriangle, RotateCcw, BookOpen, AlarmClock } from 'lucide-react';
+import { Award, AlertTriangle, RotateCcw, BookOpen, AlarmClock, CheckCircle2 } from 'lucide-react';
 import type { Course, SystemSettings } from '../../../services/db';
 import type { UserSessionData } from '../../../services/auth';
 import { CertificateView } from '../CertificateView';
@@ -16,6 +16,8 @@ interface QuizViewerProps {
   setQuizSubmitted: React.Dispatch<React.SetStateAction<boolean>>;
   settings: SystemSettings;
   setActiveLessonIdx: React.Dispatch<React.SetStateAction<number>>;
+  setStudyingCourse?: (course: Course | null) => void;
+  onDone?: () => void;
   userSession?: UserSessionData;
   showToast?: (msg: string) => void;
 }
@@ -45,6 +47,8 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
   setQuizSubmitted,
   settings,
   setActiveLessonIdx,
+  setStudyingCourse,
+  onDone,
   userSession,
   showToast,
 }) => {
@@ -116,14 +120,118 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
 
   /* ─── RESULTS VIEW ─── */
   if (quizSubmitted) {
-    if (quizPassed) {
+    if (quizPassed && studyingCourse.requiresCertification !== false) {
       return (
         <CertificateView
           course={studyingCourse}
           userSession={userSession || { name: 'Valued Learner', email: '', role: 'employee' }}
           onBack={() => setActiveLessonIdx(0)}
+          onDone={onDone || (() => { if (setStudyingCourse) setStudyingCourse(null); else setActiveLessonIdx(0); })}
           showToast={showToast}
         />
+      );
+    }
+
+    if (quizPassed && studyingCourse.requiresCertification === false) {
+      return (
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid var(--koruna-border-color)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          boxShadow: 'var(--koruna-card-shadow)'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+            padding: '1.25rem 2rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CheckCircle2 size={18} /> Course &amp; Quiz Completed
+            </span>
+            <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 10px', borderRadius: '12px', color: '#ffffff', fontSize: '0.75rem', fontWeight: 600 }}>
+              No Certificate Course
+            </span>
+          </div>
+
+          <div style={{
+            padding: '2.5rem 2rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '1.25rem'
+          }}>
+            <div style={{
+              background: '#dcfce7',
+              color: '#15803d',
+              padding: '1.25rem',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 14px rgba(22,163,74,0.15)'
+            }}>
+              <CheckCircle2 size={48} />
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#14532d', margin: '0 0 0.35rem 0' }}>
+                Assessment Passed &amp; Course Completed!
+              </h3>
+              <p style={{ color: '#166534', fontSize: '0.9rem', maxWidth: '520px', margin: '0 auto', lineHeight: 1.5 }}>
+                Congratulations! You scored <strong>{quizScore}%</strong> on the assessment quiz. All quiz answers and course lessons have been completed.
+              </p>
+            </div>
+
+            <div style={{
+              width: '100%',
+              maxWidth: '560px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              textAlign: 'left',
+              marginTop: '0.5rem'
+            }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <BookOpen size={15} style={{ color: '#16a34a' }} />
+                Completion Acknowledgment Record
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.5, margin: 0, fontStyle: 'italic' }}>
+                "{studyingCourse.acknowledgmentText || `I confirm that I have completed all lessons and submitted my quiz responses for ${studyingCourse.title}. I understand that this course does not issue a formal diploma certificate.`}"
+              </p>
+              <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#64748b' }}>
+                <span>Learner: <strong>{userSession?.name || 'Valued Learner'}</strong></span>
+                <span>Date: <strong>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong></span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <button
+                onClick={onDone || (() => { if (setStudyingCourse) setStudyingCourse(null); else setActiveLessonIdx(0); })}
+                style={{
+                  background: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.65rem 1.75rem',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)'
+                }}
+              >
+                <CheckCircle2 size={16} /> Finish &amp; Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
       );
     }
 

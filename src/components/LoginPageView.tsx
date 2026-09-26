@@ -6,11 +6,15 @@ import type { UserSessionData } from '../services/auth';
 interface LoginPageViewProps {
   onNavigateSignup: () => void;
   onLoginSuccess: (user: UserSessionData) => void;
+  sessionExpiredNotice?: string | null;
+  onClearExpiredNotice?: () => void;
 }
 
 export const LoginPageView: React.FC<LoginPageViewProps> = ({
   onNavigateSignup,
-  onLoginSuccess
+  onLoginSuccess,
+  sessionExpiredNotice,
+  onClearExpiredNotice
 }) => {
   return (
     <main className="koruna-login-page">
@@ -29,10 +33,13 @@ export const LoginPageView: React.FC<LoginPageViewProps> = ({
           <LoginForm
             onLoginSuccess={onLoginSuccess}
             onNavigateSignup={onNavigateSignup}
+            sessionExpiredNotice={sessionExpiredNotice}
+            onClearExpiredNotice={onClearExpiredNotice}
           />
         </div>
       </div>
     </main>
   );
 };
+
 

@@ -44,9 +44,9 @@ export const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           style={{ height: '40px', padding: '0 1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
           onClick={() => {
             setEditingCourseId(null);
-            setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe' });
+            setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe', imageUrl: '' });
             setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.', moduleId: 'm1', moduleTitle: 'Introduction' }]);
-            setCourseQuiz([{ question: 'What is the correct answer?', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0 }]);
+            setCourseQuiz([]);
             setCourseModules([{ id: 'm1', title: 'Introduction' }]);
             setAssignedUserEmails([]);
             onTabChange('admin_suite');

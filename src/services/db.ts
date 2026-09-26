@@ -32,6 +32,7 @@ export interface Course {
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   description: string;
   imgBg: string;
+  imageUrl?: string;
   lessons: Lesson[];
   quiz?: QuizQuestion[];
   isAssigned?: boolean;
@@ -39,6 +40,10 @@ export interface Course {
   attachments?: { name: string; url: string; size: number }[];
   trainer?: string;
   requirements?: string[];
+  contentType?: 'course' | 'document';
+  requiresCertification?: boolean;
+  documentContent?: string;
+  acknowledgmentText?: string;
 }
 
 export interface UserProgress {
@@ -49,10 +54,13 @@ export interface UserProgress {
   completedLessons: string[]; // Lesson IDs
   quizScore?: number; // Highest quiz score percent
   quizAttempts: number;
+  learningHours?: number; // Total accumulated learning hours
   practicalStatus: 'none' | 'pending' | 'approved' | 'rejected';
   practicalNotes?: string;
   overdue: boolean;
   dueDate?: string; // Target completion date
+  assignedBy?: string;
+  lastViewedAt?: string;
 }
 
 export interface Badge {
@@ -85,6 +93,42 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
   assignedBy?: string;
+}
+
+export interface PostItem {
+  id: string;
+  authorId?: string;
+  authorName: string;
+  authorEmail?: string;
+  authorRole: string;
+  authorAvatar: string;
+  authorBgColor: string;
+  timeAgo: string;
+  createdAt?: string;
+  category: 'Announcements' | 'Recognition' | 'Team Updates' | 'Learning' | 'Events';
+  badgeText?: string;
+  content: string;
+  imageUrl?: string;
+  attachedDocPreview?: boolean;
+  docTitle?: string;
+  likesCount: number;
+  celebratesCount: number;
+  comments: { id: string; author: string; text: string; timeAgo: string; createdAt?: string }[];
+  likedBy?: string[];
+  celebratedBy?: string[];
+  bookmarkedBy?: string[];
+  isLiked?: boolean;
+  isCelebrated?: boolean;
+  isBookmarked?: boolean;
+  isNew?: boolean;
+}
+
+export interface PostReaction {
+  id: string;
+  postId: string;
+  userKey: string;
+  type: 'like' | 'celebrate' | 'bookmark';
+  createdAt: string;
 }
 
 
@@ -138,7 +182,7 @@ const DEFAULT_COURSES: Course[] = [
     level: 'Intermediate',
     description: 'Build a practical foundation in mortgage underwriting — covering income verification, credit risk assessment, debt-to-income calculations, and compliance checkpoints used in day-to-day loan processing at Koruna. Includes real case files and a final assessment.',
     imgBg: '#fbeef4',
-    trainer: 'Jefrey Tatoy',
+    trainer: 'Dr. Marcus Vance',
     requirements: [
       'Complete "Mortgage Basics" course',
       'Lending Cluster employees only',
@@ -158,7 +202,7 @@ const DEFAULT_COURSES: Course[] = [
 2. The core workflow from loan origination to closing.
 3. How Koruna Academy helps you stay compliant with internal and federal guidelines.
 Ensure you download the resources below to follow along with the exercises.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view',
         moduleId: 'm1',
         moduleTitle: 'Introduction to Underwriting',
         duration: '6m'
@@ -523,13 +567,17 @@ The standard workflow goes from initial file review, issuing conditions, verifyi
     level: 'Beginner',
     description: 'Learn structural techniques for active listening, managing difficult client conversations during underwriting roadblocks, and establishing positive credit relations.',
     imgBg: '#fee2e2',
+    attachments: [
+      { name: 'De-escalation Call Framework.pdf', url: '#', size: 145000 },
+      { name: 'Client Communication Cheat Sheet.pdf', url: '#', size: 210000 }
+    ],
     lessons: [
       {
         id: 'c3-l1',
         title: 'Active Listening & Empathy',
         content: `Active listening builds trust and decreases tension in difficult financial conversations.
-1. Pay Undivided Attention: Focus on the customer\'s concerns, avoiding distractions.
-2. Reflective Feedback: Paraphrase the borrower\'s concerns (e.g., "It sounds like you\'re concerned about the closing timeline because your lease ends next month").
+1. Pay Undivided Attention: Focus on the customer's concerns, avoiding distractions.
+2. Reflective Feedback: Paraphrase the borrower's concerns (e.g., "It sounds like you're concerned about the closing timeline because your lease ends next month").
 3. Ask Clarifying Questions: Rather than guessing, ask open-ended questions about their financial files.`
       }
     ],
@@ -555,6 +603,10 @@ The standard workflow goes from initial file review, issuing conditions, verifyi
     level: 'Beginner',
     description: 'A practical guide for non-technical employees to use AI copilots, draft customer emails, summarize underwriting checklists, and organize daily reports safely.',
     imgBg: '#e0f2fe',
+    attachments: [
+      { name: 'AI Prompt Engineering Cheat Sheet.pdf', url: '#', size: 180000 },
+      { name: 'Data Security Checklist.pdf', url: '#', size: 115000 }
+    ],
     lessons: [
       {
         id: 'c4-l1',
@@ -598,16 +650,16 @@ const DEFAULT_USERS: DatabaseUser[] = [
 
 const DEFAULT_PROGRESS: UserProgress[] = [
   // Alex Rivera (Employee)
-  { userEmail: 'alex.rivera@koruna.com', courseId: 'c1', progressPercent: 68, completedLessons: ['c1-l1', 'c1-l2'], quizAttempts: 0, practicalStatus: 'none', overdue: false },
-  { userEmail: 'alex.rivera@koruna.com', courseId: 'c2', progressPercent: 100, completedLessons: ['c2-l1', 'c2-l2'], quizScore: 94, quizAttempts: 1, practicalStatus: 'none', overdue: false },
-  
+  { userEmail: 'alex.rivera@koruna.com', courseId: 'c1', progressPercent: 68, completedLessons: ['c1-l1', 'c1-l2'], quizAttempts: 0, practicalStatus: 'none', overdue: false, learningHours: 1.7 },
+  { userEmail: 'alex.rivera@koruna.com', courseId: 'c2', progressPercent: 100, completedLessons: ['c2-l1', 'c2-l2'], quizScore: 94, quizAttempts: 1, practicalStatus: 'none', overdue: false, learningHours: 2.5 },
+
   // Jessica Taylor (Employee - on Sarah's team)
-  { userEmail: 'jessica.taylor@koruna.com', courseId: 'c1', progressPercent: 45, completedLessons: ['c1-l1'], quizAttempts: 0, practicalStatus: 'pending', overdue: false, practicalNotes: 'Underwriting fundamentals worksheet draft. Please review.' },
-  { userEmail: 'jessica.taylor@koruna.com', courseId: 'c2', progressPercent: 0, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: true, dueDate: '2026-07-25' }, // Overdue by 2 days
+  { userEmail: 'jessica.taylor@koruna.com', courseId: 'c1', progressPercent: 45, completedLessons: ['c1-l1'], quizAttempts: 0, practicalStatus: 'pending', overdue: false, practicalNotes: 'Underwriting fundamentals worksheet draft. Please review.', learningHours: 1.1 },
+  { userEmail: 'jessica.taylor@koruna.com', courseId: 'c2', progressPercent: 0, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: true, dueDate: '2026-07-25', learningHours: 0 },
 
   // Jordan Taylor (Employee - Software Engineering)
-  { userEmail: 'jordan.taylor@koruna.com', courseId: 'c1', progressPercent: 12, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: false },
-  { userEmail: 'jordan.taylor@koruna.com', courseId: 'c2', progressPercent: 0, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: true, dueDate: '2026-07-23' } // Overdue by 4 days
+  { userEmail: 'jordan.taylor@koruna.com', courseId: 'c1', progressPercent: 12, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: false, learningHours: 0.3 },
+  { userEmail: 'jordan.taylor@koruna.com', courseId: 'c2', progressPercent: 0, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: true, dueDate: '2026-07-23', learningHours: 0 }
 ];
 
 const DEFAULT_PRACTICALS: PracticalSubmission[] = [
@@ -714,7 +766,11 @@ const getStorageItem = <T>(key: string, defaultValue: T): T => {
 };
 
 const setStorageItem = <T>(key: string, value: T): void => {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn(`Failed to save key "${key}" to localStorage:`, err);
+  }
 };
 
 // --- DATABASE DTO MAPPERS ---
@@ -809,12 +865,17 @@ const mapDBCourse = (db: any): Course => {
     level: db.level,
     description: description,
     imgBg: db.img_bg || '#e0f2fe',
+    imageUrl: db.image_url || db.imageUrl || undefined,
     lessons: typeof db.lessons === 'string' ? JSON.parse(db.lessons) : (db.lessons || []),
     quiz: typeof db.quiz === 'string' ? JSON.parse(db.quiz) : (db.quiz || []),
     assignedUsers: parseAssignedUsers(db.assigned_users),
     attachments,
     trainer,
-    requirements
+    requirements,
+    contentType: db.content_type || db.contentType || 'course',
+    requiresCertification: db.requires_certification !== undefined ? Boolean(db.requires_certification) : (db.requiresCertification !== undefined ? Boolean(db.requiresCertification) : true),
+    documentContent: db.document_content || db.documentContent || undefined,
+    acknowledgmentText: db.acknowledgment_text || db.acknowledgmentText || undefined
   };
 };
 
@@ -828,14 +889,38 @@ const mapCourseToDB = (c: Course) => {
     level: c.level,
     description: c.description,
     img_bg: c.imgBg,
+    image_url: c.imageUrl || null,
     lessons: JSON.stringify(c.lessons),
     quiz: JSON.stringify(c.quiz),
     assigned_users: c.assignedUsers || [],
     attachments: JSON.stringify(c.attachments || []),
     trainer: c.trainer || null,
-    requirements: JSON.stringify(c.requirements || [])
+    requirements: JSON.stringify(c.requirements || []),
+    content_type: c.contentType || 'course',
+    requires_certification: c.requiresCertification !== undefined ? c.requiresCertification : true,
+    document_content: c.documentContent || null,
+    acknowledgment_text: c.acknowledgmentText || null
   };
 };
+
+export function calculateCourseLearningHours(course?: Course, progressPercent: number = 100): number {
+  if (!course || !course.lessons || course.lessons.length === 0) {
+    return Number(((progressPercent / 100) * 1.0).toFixed(1));
+  }
+  const totalHours = course.lessons.reduce((acc, l) => {
+    if (l.duration) {
+      const match = l.duration.match(/(\d+(?:\.\d+)?)\s*(min|m|h|hour)/i);
+      if (match) {
+        const val = parseFloat(match[1]);
+        const unit = match[2].toLowerCase();
+        return acc + (unit.startsWith('h') ? val : val / 60);
+      }
+    }
+    return acc + 0.5;
+  }, 0);
+  const finalTotal = Math.max(totalHours, 0.5);
+  return Number(((progressPercent / 100) * finalTotal).toFixed(1));
+}
 
 const mapDBProgress = (db: any): UserProgress => ({
   userEmail: db.user_email?.toLowerCase() || '',
@@ -845,10 +930,13 @@ const mapDBProgress = (db: any): UserProgress => ({
   completedLessons: typeof db.completed_lessons === 'string' ? JSON.parse(db.completed_lessons) : (db.completed_lessons || []),
   quizScore: db.quiz_score !== null && db.quiz_score !== undefined ? Number(db.quiz_score) : undefined,
   quizAttempts: Number(db.quiz_attempts || 0),
+  learningHours: db.learning_hours !== null && db.learning_hours !== undefined ? Number(db.learning_hours) : (db.learningHours !== undefined ? Number(db.learningHours) : undefined),
   practicalStatus: db.practical_status || 'none',
   practicalNotes: db.practical_notes || undefined,
   overdue: Boolean(db.overdue),
-  dueDate: db.due_date || undefined
+  dueDate: db.due_date || undefined,
+  assignedBy: db.assigned_by || undefined,
+  lastViewedAt: db.last_viewed_at || undefined
 });
 
 const mapProgressToDB = (p: UserProgress) => ({
@@ -859,10 +947,13 @@ const mapProgressToDB = (p: UserProgress) => ({
   completed_lessons: JSON.stringify(p.completedLessons),
   quiz_score: p.quizScore !== undefined ? p.quizScore : null,
   quiz_attempts: p.quizAttempts,
+  learning_hours: p.learningHours !== undefined ? p.learningHours : null,
   practical_status: p.practicalStatus,
   practical_notes: p.practicalNotes || null,
   overdue: p.overdue,
-  due_date: p.dueDate || null
+  due_date: p.dueDate || null,
+  assigned_by: p.assignedBy || null,
+  last_viewed_at: p.lastViewedAt || null
 });
 
 const mapDBPractical = (db: any): PracticalSubmission => ({
@@ -911,6 +1002,151 @@ const mapNotificationToDB = (n: Notification) => ({
   assigned_by: n.assignedBy || null
 });
 
+const parseStringArray = (val: any): string[] => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const nowMs = Date.now();
+const DEFAULT_POSTS: PostItem[] = [
+  {
+    id: 'hpost-1',
+    authorName: 'Airsea Estinor',
+    authorRole: 'Team Lead · Financial Koalas',
+    authorAvatar: 'AE',
+    authorBgColor: '#880e4f',
+    timeAgo: '2h ago',
+    createdAt: new Date(nowMs - 2 * 3600 * 1000).toISOString(),
+    category: 'Recognition',
+    badgeText: '🎉 Recognised Alexcis · +200 Koruna Points',
+    content: 'Thank you for going above and beyond for the client this week, Alexcis — your attention to detail made all the difference.',
+    likesCount: 14,
+    celebratesCount: 8,
+    comments: [
+      { id: 'c1', author: 'Alexcis', text: 'Thank you Airsea! Really appreciate the recognition! 🙏', timeAgo: '1h ago', createdAt: new Date(nowMs - 3600 * 1000).toISOString() }
+    ],
+    likedBy: [],
+    celebratedBy: [],
+    bookmarkedBy: [],
+    isLiked: false,
+    isCelebrated: false,
+    isBookmarked: false
+  },
+  {
+    id: 'hpost-2',
+    authorName: 'HR Team',
+    authorRole: 'Announcement',
+    authorAvatar: 'HR',
+    authorBgColor: '#9d174d',
+    timeAgo: '5h ago',
+    createdAt: new Date(nowMs - 5 * 3600 * 1000).toISOString(),
+    category: 'Announcements',
+    content: 'October Public Holiday Schedule is now available in the Knowledge Hub. Please review before planning your leave.',
+    attachedDocPreview: true,
+    docTitle: 'October-holiday-schedule.pdf',
+    likesCount: 32,
+    celebratesCount: 12,
+    comments: [],
+    likedBy: [],
+    celebratedBy: [],
+    bookmarkedBy: [],
+    isLiked: false,
+    isCelebrated: false,
+    isBookmarked: false
+  },
+  {
+    id: 'hpost-3',
+    authorName: 'Lending Wombats',
+    authorRole: 'Team Update',
+    authorAvatar: 'LW',
+    authorBgColor: '#be185d',
+    timeAgo: '1d ago',
+    createdAt: new Date(nowMs - 24 * 3600 * 1000).toISOString(),
+    category: 'Team Updates',
+    content: 'Congratulations Team Lending Wombats on hitting this quarter\'s client satisfaction target!',
+    likesCount: 45,
+    celebratesCount: 29,
+    comments: [
+      { id: 'c2', author: 'Jessica Timon', text: 'Kudos team! Outstanding effort!', timeAgo: '1d ago', createdAt: new Date(nowMs - 24 * 3600 * 1000).toISOString() }
+    ],
+    likedBy: [],
+    celebratedBy: [],
+    bookmarkedBy: [],
+    isLiked: false,
+    isCelebrated: false,
+    isBookmarked: false
+  }
+];
+
+const mapDBPost = (db: any): PostItem => {
+  const likedBy = parseStringArray(db.liked_by ?? db.likedBy);
+  const celebratedBy = parseStringArray(db.celebrated_by ?? db.celebratedBy);
+  const bookmarkedBy = parseStringArray(db.bookmarked_by ?? db.bookmarkedBy);
+
+  return {
+    id: String(db.id),
+    authorId: db.user_id ? String(db.user_id) : (db.author_id ? String(db.author_id) : (db.authorId ? String(db.authorId) : undefined)),
+    authorName: db.author_name || db.authorName || 'Koruna Member',
+    authorEmail: db.author_email || db.authorEmail || undefined,
+    authorRole: db.author_role || db.authorRole || 'Team Member',
+    authorAvatar: db.author_avatar || db.authorAvatar || 'KM',
+    authorBgColor: db.author_bg_color || db.authorBgColor || '#a31555',
+    timeAgo: db.time_ago || db.timeAgo || 'Recently',
+    createdAt: db.created_at || db.createdAt || undefined,
+    category: db.category || 'Team Updates',
+    badgeText: db.badge_text || db.badgeText || undefined,
+    content: db.content || '',
+    imageUrl: db.image_url || db.imageUrl || undefined,
+    attachedDocPreview: Boolean(db.attached_doc_preview || db.attachedDocPreview),
+    docTitle: db.doc_title || db.docTitle || undefined,
+    likesCount: Number(db.likes_count ?? db.likesCount ?? 0),
+    celebratesCount: Number(db.celebrates_count ?? db.celebratesCount ?? 0),
+    comments: typeof db.comments === 'string' ? JSON.parse(db.comments) : (db.comments || []),
+    likedBy,
+    celebratedBy,
+    bookmarkedBy,
+    isLiked: Boolean(db.is_liked || db.isLiked),
+    isCelebrated: Boolean(db.is_celebrated || db.isCelebrated),
+    isBookmarked: Boolean(db.is_bookmarked || db.isBookmarked),
+    isNew: Boolean(db.is_new || db.isNew)
+  };
+};
+
+const mapPostToDB = (p: PostItem) => ({
+  id: p.id,
+  user_id: p.authorId || null,
+  author_name: p.authorName,
+  author_email: p.authorEmail || null,
+  author_role: p.authorRole,
+  author_avatar: p.authorAvatar,
+  author_bg_color: p.authorBgColor,
+  time_ago: p.timeAgo,
+  created_at: p.createdAt || new Date().toISOString(),
+  category: p.category,
+  badge_text: p.badgeText || null,
+  content: p.content,
+  image_url: p.imageUrl || null,
+  attached_doc_preview: p.attachedDocPreview || false,
+  doc_title: p.docTitle || null,
+  likes_count: p.likesCount,
+  celebrates_count: p.celebratesCount,
+  comments: p.comments || [],
+  liked_by: JSON.stringify(p.likedBy || []),
+  celebrated_by: JSON.stringify(p.celebratedBy || []),
+  bookmarked_by: JSON.stringify(p.bookmarkedBy || []),
+  is_liked: p.isLiked || false,
+  is_celebrated: p.isCelebrated || false,
+  is_bookmarked: p.isBookmarked || false
+});
+
 
 // ==========================================
 // DB SERVICE API
@@ -925,7 +1161,7 @@ export const dbService = {
     setStorageItem('koruna_settings', settings);
   },
 
-  // --- PERMISSIONS ---
+  // --- USER ROLES & PERMISSIONS ---
   getPermissions(): RolePermissions[] {
     const perms = getStorageItem<RolePermissions[]>('koruna_permissions', DEFAULT_PERMISSIONS);
     const trainerPerms = perms.find(p => p.role === 'trainer');
@@ -937,6 +1173,12 @@ export const dbService = {
   },
   savePermissions(perms: RolePermissions[]): void {
     setStorageItem('koruna_permissions', perms);
+  },
+  getRolePermissions(): RolePermissions[] {
+    return this.getPermissions();
+  },
+  saveRolePermissions(permissions: RolePermissions[]): void {
+    this.savePermissions(permissions);
   },
 
   // --- DEPARTMENTS ---
@@ -954,145 +1196,200 @@ export const dbService = {
     return newDep;
   },
 
-  // --- USER DIRECTORY ---
+  // --- USERS ---
   async getUsers(): Promise<DatabaseUser[]> {
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase
-          .from('profiles')
-          .select('id, user_id, full_name, role, department, created_at, email');
+          .from('users')
+          .select('*');
         if (data && !error) {
-          const localUsers = getStorageItem<DatabaseUser[]>('koruna_users', DEFAULT_USERS);
-          const mapped: DatabaseUser[] = data.map((p) => {
-            const matchedLocal = localUsers.find(u => u.id === p.id);
-            const fallbackUserId = matchedLocal?.userId || (1000 + Math.abs(p.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 9000));
-            return {
-              id: p.id,
-              userId: p.user_id ? Number(p.user_id) : fallbackUserId,
-              name: p.full_name,
-              email: p.email || matchedLocal?.email || `${p.full_name.toLowerCase().replace(/\s+/g, '.')}@koruna.com`,
-              role: p.role as UserRole,
-              department: p.department || 'Software Engineering',
-              createdAt: p.created_at?.split('T')[0] || '2026-07-27'
-            };
-          });
-
-          return mapped;
-        }
-        if (error) {
-          console.error('Supabase select from profiles failed:', error.message, error.details || '');
+          return data.map((u: any) => ({
+            id: u.id,
+            userId: u.user_id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            department: u.department,
+            createdAt: u.created_at
+          }));
         }
       } catch (err) {
-        console.error('Supabase profile fetch error:', err);
+        console.error('Failed to get users from Supabase:', err);
       }
-      console.warn('Supabase profiles query failed or returned no data. Falling back to local storage users.');
     }
-    return getStorageItem<DatabaseUser[]>('koruna_users', DEFAULT_USERS).map((u, index) => ({
-      ...u,
-      userId: u.userId || (1000 + index)
-    }));
+    return getStorageItem<DatabaseUser[]>('koruna_users', DEFAULT_USERS);
   },
 
-  async saveUser(user: DatabaseUser): Promise<void> {
-    if (isSupabaseConfigured() && user.id && !user.id.startsWith('u')) {
+  async saveUser(user: Omit<DatabaseUser, 'id'> & { id?: string }): Promise<DatabaseUser> {
+    const newUser: DatabaseUser = {
+      ...user,
+      id: user.id || `u-${Date.now()}`
+    };
+
+    if (isSupabaseConfigured()) {
       try {
-        await supabase
-          .from('profiles')
-          .update({
-            full_name: user.name,
-            role: user.role,
-            department: user.department,
-            email: user.email
-          })
-          .eq('id', user.id);
+        await supabase.from('users').upsert({
+          id: newUser.id,
+          user_id: newUser.userId,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          department: newUser.department,
+          created_at: newUser.createdAt
+        });
       } catch (err) {
-        console.error('Supabase profile update failed:', err);
+        console.error('Supabase saveUser failed:', err);
       }
     }
-    const users = await this.getUsers();
-    const idx = users.findIndex(u => u.email === user.email);
+
+    const users = getStorageItem<DatabaseUser[]>('koruna_users', DEFAULT_USERS);
+    const idx = users.findIndex(u => u.email.toLowerCase() === newUser.email.toLowerCase());
     if (idx !== -1) {
-      users[idx] = user;
+      users[idx] = newUser;
     } else {
-      users.push(user);
+      users.push(newUser);
     }
     setStorageItem('koruna_users', users);
+    return newUser;
   },
 
   async deleteUser(email: string): Promise<void> {
     const users = await this.getUsers();
-    const user = users.find(u => u.email === email);
-    if (user && isSupabaseConfigured() && !user.id.startsWith('u')) {
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (user && isSupabaseConfigured() && user.id && !user.id.startsWith('u')) {
       try {
-        await supabase.from('profiles').delete().eq('id', user.id);
+        await supabase.from('users').delete().eq('id', user.id);
       } catch (err) {
-        console.error('Supabase delete failed:', err);
+        console.error('Supabase delete user failed:', err);
       }
     }
-    const filtered = users.filter(u => u.email !== email);
+    const filtered = users.filter(u => u.email.toLowerCase() !== email.toLowerCase());
     setStorageItem('koruna_users', filtered);
   },
 
-  // --- COURSES ---
+  // --- COURSES & DOCUMENTS ---
   async getCourses(): Promise<Course[]> {
+    let dbCourses: Course[] = [];
+    let dbDocs: Course[] = [];
+    let fetchedFromSupabase = false;
+
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase
           .from('courses')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
+          .select('*');
         if (data && !error) {
-          const coursesMapped = data.map(db => mapDBCourse(db));
-
           if (data.length === 0) {
-            // Seed database courses table if it's empty
             const coursesToInsert = DEFAULT_COURSES.map(c => mapCourseToDB(c));
             const { error: insErr } = await supabase.from('courses').insert(coursesToInsert);
             if (!insErr) {
-              return DEFAULT_COURSES;
+              dbCourses = DEFAULT_COURSES;
             }
           } else {
-            return coursesMapped;
+            dbCourses = data.map(db => mapDBCourse(db));
           }
+          fetchedFromSupabase = true;
         }
       } catch (err) {
         console.error('Failed to get courses from Supabase:', err);
       }
+
+      try {
+        const { data: docsData, error: docsError } = await supabase
+          .from('documents')
+          .select('*');
+        if (docsData && !docsError) {
+          dbDocs = docsData.map(db => mapDBCourse(db));
+          fetchedFromSupabase = true;
+        }
+      } catch (err) {
+        console.error('Failed to get documents from Supabase:', err);
+      }
     }
-    return getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
+
+    const localCourses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
+    const localDocs = getStorageItem<Course[]>('koruna_documents', []);
+    const localAll = [...localCourses, ...localDocs];
+
+    if (fetchedFromSupabase) {
+      // Merge Supabase items and LocalStorage items by ID so newly created or edited local courses are preserved
+      const courseMap = new Map<string, Course>();
+      [...dbCourses, ...dbDocs].forEach(c => courseMap.set(c.id, c));
+      localAll.forEach(c => courseMap.set(c.id, c));
+      return Array.from(courseMap.values());
+    }
+
+    return localAll;
   },
-  
+
   async getCourseById(id: string): Promise<Course | undefined> {
     const courses = await this.getCourses();
     return courses.find(c => c.id === id);
   },
 
   async saveCourse(course: Course): Promise<Course> {
+    const isDocument = course.contentType === 'document';
+    const targetTable = isDocument ? 'documents' : 'courses';
+    const otherTable = isDocument ? 'courses' : 'documents';
+    const targetStorageKey = isDocument ? 'koruna_documents' : 'koruna_courses';
+    const otherStorageKey = isDocument ? 'koruna_courses' : 'koruna_documents';
+
+    // 1. Always save to LocalStorage immediately
+    const targetList = getStorageItem<Course[]>(targetStorageKey, isDocument ? [] : DEFAULT_COURSES);
+    const idx = targetList.findIndex(c => c.id === course.id);
+    if (idx !== -1) {
+      targetList[idx] = course;
+    } else {
+      targetList.push(course);
+    }
+    setStorageItem(targetStorageKey, targetList);
+
+    // Clean up from other storage if moving types
+    const otherList = getStorageItem<Course[]>(otherStorageKey, isDocument ? DEFAULT_COURSES : []);
+    const filteredOther = otherList.filter(c => c.id !== course.id);
+    if (filteredOther.length !== otherList.length) {
+      setStorageItem(otherStorageKey, filteredOther);
+    }
+
+    // 2. Sync to Supabase if configured with fallback payload handling
     if (isSupabaseConfigured()) {
       try {
-        if (!course.id || course.id.startsWith('c-temp')) {
-          course.id = `c-${Date.now()}`;
-        }
         const dbCourse = mapCourseToDB(course);
-        const { error } = await supabase.from('courses').upsert(dbCourse);
+        const { error } = await supabase.from(targetTable).upsert(dbCourse);
         if (error) {
-          console.error('Failed to upsert course to Supabase:', error);
+          console.warn(`Primary upsert to ${targetTable} returned error:`, error);
+          // Fallback: try upserting to standard 'courses' table with core columns
+          const fallbackCourse = {
+            id: course.id,
+            title: course.title,
+            category: course.category,
+            rating: course.rating || 4.5,
+            code: course.code,
+            level: course.level,
+            description: course.description,
+            img_bg: course.imgBg,
+            image_url: course.imageUrl || null,
+            lessons: JSON.stringify(course.lessons),
+            quiz: JSON.stringify(course.quiz || []),
+            assigned_users: course.assignedUsers || [],
+            attachments: JSON.stringify(course.attachments || []),
+            trainer: course.trainer || null,
+            requirements: JSON.stringify(course.requirements || [])
+          };
+          const { error: fbErr } = await supabase.from('courses').upsert(fallbackCourse);
+          if (fbErr) {
+            console.warn('Fallback upsert to courses table also returned error:', fbErr);
+          }
+        } else {
+          // If content type changed, remove from old table
+          await supabase.from(otherTable).delete().eq('id', course.id);
         }
       } catch (err) {
-        console.error('Supabase saveCourse failed:', err);
+        console.error(`Supabase saveCourse to ${targetTable} failed:`, err);
       }
     }
-    
-    const courses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
-    const idx = courses.findIndex(c => c.id === course.id);
-    if (idx !== -1) {
-      courses[idx] = course;
-    } else {
-      if (!course.id) course.id = `c-${Date.now()}`;
-      courses.push(course);
-    }
-    setStorageItem('koruna_courses', courses);
+
     return course;
   },
 
@@ -1100,12 +1397,19 @@ export const dbService = {
     if (isSupabaseConfigured()) {
       try {
         await supabase.from('courses').delete().eq('id', id);
+        await supabase.from('documents').delete().eq('id', id);
       } catch (err) {
         console.error('Supabase deleteCourse failed:', err);
       }
     }
-    const courses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES).filter(c => c.id !== id);
-    setStorageItem('koruna_courses', courses);
+
+    const courses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
+    const filteredCourses = courses.filter(c => c.id !== id);
+    setStorageItem('koruna_courses', filteredCourses);
+
+    const docs = getStorageItem<Course[]>('koruna_documents', []);
+    const filteredDocs = docs.filter(c => c.id !== id);
+    setStorageItem('koruna_documents', filteredDocs);
   },
 
   // --- USER PROGRESS ---
@@ -1120,11 +1424,10 @@ export const dbService = {
           .from('user_progress')
           .select('*')
           .eq('user_email', email.toLowerCase());
+
         if (data && !error) {
-          let userProg = data.map(db => mapDBProgress(db));
+          const userProg = data.map(db => mapDBProgress(db));
           const courses = await this.getCourses();
-          let updated = false;
-          const toInsert: any[] = [];
 
           for (const c of courses) {
             if (!userProg.some(p => p.courseId === c.id)) {
@@ -1137,16 +1440,9 @@ export const dbService = {
                 practicalStatus: 'none',
                 overdue: false
               };
+              await this.saveUserProgress(newProg);
               userProg.push(newProg);
-              toInsert.push(mapProgressToDB(newProg));
-              updated = true;
             }
-          }
-
-          if (updated && toInsert.length > 0) {
-            await supabase
-              .from('user_progress')
-              .upsert(toInsert);
           }
 
           return userProg;
@@ -1158,8 +1454,10 @@ export const dbService = {
 
     const list = this.getProgressList();
     let userProg = list.filter(p => p.userEmail.toLowerCase() === email.toLowerCase());
-    
-    const courses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
+
+    const localCourses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
+    const localDocs = getStorageItem<Course[]>('koruna_documents', []);
+    const courses = [...localCourses, ...localDocs];
     let updated = false;
 
     courses.forEach(c => {
@@ -1201,8 +1499,8 @@ export const dbService = {
     }
 
     const list = this.getProgressList();
-    const idx = list.findIndex(p => 
-      p.userEmail.toLowerCase() === prog.userEmail.toLowerCase() && 
+    const idx = list.findIndex(p =>
+      p.userEmail.toLowerCase() === prog.userEmail.toLowerCase() &&
       p.courseId === prog.courseId &&
       (p.applicationId || 0) === (prog.applicationId || 0)
     );
@@ -1224,7 +1522,6 @@ export const dbService = {
           .order('created_at', { ascending: false });
         if (data && !error) {
           if (data.length === 0) {
-            // Seed practicals
             const practicalsToInsert = DEFAULT_PRACTICALS.map(p => mapPracticalToDB(p));
             const { error: insErr } = await supabase.from('practical_submissions').insert(practicalsToInsert);
             if (!insErr) {
@@ -1291,7 +1588,7 @@ export const dbService = {
       }
     }
 
-    const subs = getStorageItem<PracticalSubmission[]>('koruna_practicals', DEFAULT_PRACTICALS);
+    const subs = getStorageItem<PracticalSubmission[]>('koruna_practicals', DEFAULT_POSTS as any);
     const sub = subs.find(s => s.id === id);
     if (sub) {
       sub.status = status;
@@ -1392,7 +1689,8 @@ export const dbService = {
       practicalStatus: existingProg ? existingProg.practicalStatus : 'none',
       practicalNotes: existingProg ? existingProg.practicalNotes : undefined,
       overdue: false,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      assignedBy: assignedBy || existingProg?.assignedBy
     };
 
     await this.saveUserProgress(newProg);
@@ -1418,7 +1716,7 @@ export const dbService = {
         userEmail: email.toLowerCase(),
         courseId: courseId,
         title: 'New Course Assigned',
-        message: assignedBy 
+        message: assignedBy
           ? `${assignedBy} assigned you a new course: "${courseTitle}".`
           : `You have been assigned a new course: "${courseTitle}".`,
         type: 'course_assigned',
@@ -1602,6 +1900,258 @@ export const dbService = {
     const list = getStorageItem<Notification[]>('koruna_notifications', []);
     const filtered = list.filter(n => n.id !== id);
     setStorageItem('koruna_notifications', filtered);
+  },
+
+  // --- POST REACTIONS STORE ---
+  async getReactions(): Promise<PostReaction[]> {
+    const localReactions = getStorageItem<PostReaction[]>('koruna_post_reactions_v1', []);
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('post_reactions')
+          .select('*');
+        if (data && !error) {
+          const dbReactions: PostReaction[] = data.map(db => ({
+            id: String(db.id),
+            postId: String(db.post_id || db.postId),
+            userKey: String(db.user_key || db.userKey).toLowerCase(),
+            type: db.type as 'like' | 'celebrate' | 'bookmark',
+            createdAt: db.created_at || db.createdAt || new Date().toISOString()
+          }));
+          const combined = [...dbReactions];
+          localReactions.forEach(lr => {
+            if (!combined.some(c => String(c.postId) === String(lr.postId) && c.userKey === lr.userKey.toLowerCase() && c.type === lr.type)) {
+              combined.push(lr);
+            }
+          });
+          return combined;
+        }
+      } catch (err) {
+        console.error('Failed to fetch reactions from Supabase:', err);
+      }
+    }
+    return localReactions;
+  },
+
+  async toggleReaction(
+    postId: string,
+    userKey: string,
+    type: 'like' | 'celebrate' | 'bookmark'
+  ): Promise<{ isAdded: boolean; reactions: PostReaction[] }> {
+    const targetPostId = String(postId);
+    const targetUserKey = userKey.toLowerCase();
+    let localReactions = getStorageItem<PostReaction[]>('koruna_post_reactions_v1', []);
+
+    const existingIdx = localReactions.findIndex(
+      r => String(r.postId) === targetPostId && r.userKey.toLowerCase() === targetUserKey && r.type === type
+    );
+
+    let isAdded = false;
+
+    if (existingIdx !== -1) {
+      localReactions = localReactions.filter((_, idx) => idx !== existingIdx);
+      setStorageItem('koruna_post_reactions_v1', localReactions);
+
+      if (isSupabaseConfigured()) {
+        try {
+          await supabase
+            .from('post_reactions')
+            .delete()
+            .match({ post_id: targetPostId, user_key: targetUserKey, type: type });
+        } catch (err) {
+          console.error('Failed to remove reaction from Supabase:', err);
+        }
+      }
+    } else {
+      isAdded = true;
+      const newReaction: PostReaction = {
+        id: `pr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        postId: targetPostId,
+        userKey: targetUserKey,
+        type: type,
+        createdAt: new Date().toISOString()
+      };
+      localReactions.push(newReaction);
+      setStorageItem('koruna_post_reactions_v1', localReactions);
+
+      if (isSupabaseConfigured()) {
+        try {
+          await supabase.from('post_reactions').upsert({
+            id: newReaction.id,
+            post_id: targetPostId,
+            user_key: targetUserKey,
+            type: type,
+            created_at: newReaction.createdAt
+          });
+        } catch (err) {
+          console.error('Failed to save reaction to Supabase:', err);
+        }
+      }
+    }
+
+    return { isAdded, reactions: localReactions };
+  },
+
+  // --- HOME POSTS (SUPABASE & FALLBACK) ---
+  async getPosts(): Promise<PostItem[]> {
+    const rawV3 = getStorageItem<PostItem[]>('koruna_home_posts_v3', []);
+    let localPosts: PostItem[];
+    if (!rawV3 || rawV3.length === 0) {
+      const rawV2 = getStorageItem<PostItem[]>('koruna_home_posts_v2', []);
+      if (rawV2.length > 0) {
+        localPosts = rawV2.map(p => mapDBPost(p));
+      } else {
+        localPosts = DEFAULT_POSTS.map(p => mapDBPost(p));
+      }
+      setStorageItem('koruna_home_posts_v3', localPosts);
+    } else {
+      localPosts = rawV3.map(p => mapDBPost(p));
+    }
+
+    const reactions = await this.getReactions();
+    let fetchedPosts = localPosts;
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (data && !error && data.length > 0) {
+          fetchedPosts = data.map(db => mapDBPost(db));
+        }
+      } catch (err) {
+        console.error('Failed to fetch posts from Supabase:', err);
+      }
+    }
+
+    return fetchedPosts.map(post => {
+      const pId = String(post.id);
+      const localMatch = localPosts.find(
+        lp => String(lp.id) === pId || (lp.content && post.content && lp.content.trim() === post.content.trim())
+      );
+
+      const reactionLikes = reactions
+        .filter(r => String(r.postId) === pId && r.type === 'like')
+        .map(r => r.userKey.toLowerCase());
+
+      const reactionCelebrates = reactions
+        .filter(r => String(r.postId) === pId && r.type === 'celebrate')
+        .map(r => r.userKey.toLowerCase());
+
+      const reactionBookmarks = reactions
+        .filter(r => String(r.postId) === pId && r.type === 'bookmark')
+        .map(r => r.userKey.toLowerCase());
+
+      const baseLikedBy = localMatch?.likedBy || post.likedBy || [];
+      const baseCelebratedBy = localMatch?.celebratedBy || post.celebratedBy || [];
+      const baseBookmarkedBy = localMatch?.bookmarkedBy || post.bookmarkedBy || [];
+
+      const mergedLikedBy = Array.from(new Set([...baseLikedBy, ...reactionLikes]));
+      const mergedCelebratedBy = Array.from(new Set([...baseCelebratedBy, ...reactionCelebrates]));
+      const mergedBookmarkedBy = Array.from(new Set([...baseBookmarkedBy, ...reactionBookmarks]));
+
+      const baseLikesCount = localMatch ? localMatch.likesCount : post.likesCount;
+      const baseCelebratesCount = localMatch ? localMatch.celebratesCount : post.celebratesCount;
+
+      const finalLikesCount = Math.max(baseLikesCount, mergedLikedBy.length);
+      const finalCelebratesCount = Math.max(baseCelebratesCount, mergedCelebratedBy.length);
+
+      return {
+        ...post,
+        id: pId,
+        imageUrl: post.imageUrl || localMatch?.imageUrl || undefined,
+        docTitle: post.docTitle || localMatch?.docTitle || undefined,
+        attachedDocPreview: post.attachedDocPreview || localMatch?.attachedDocPreview || false,
+        likedBy: mergedLikedBy,
+        celebratedBy: mergedCelebratedBy,
+        bookmarkedBy: mergedBookmarkedBy,
+        likesCount: finalLikesCount,
+        celebratesCount: finalCelebratesCount,
+        isLiked: mergedLikedBy.length > 0,
+        isCelebrated: mergedCelebratedBy.length > 0,
+        isBookmarked: mergedBookmarkedBy.length > 0
+      };
+    });
+  },
+
+  async savePost(post: PostItem): Promise<PostItem> {
+    const cleanPost: PostItem = {
+      ...post,
+      id: String(post.id),
+      likedBy: post.likedBy || [],
+      celebratedBy: post.celebratedBy || [],
+      bookmarkedBy: post.bookmarkedBy || [],
+      likesCount: post.likesCount || 0,
+      celebratesCount: post.celebratesCount || 0
+    };
+
+    const posts = getStorageItem<PostItem[]>('koruna_home_posts_v3', []);
+    const existingIdx = posts.findIndex(
+      p => String(p.id) === String(cleanPost.id) ||
+        (p.content && cleanPost.content && p.content.trim() === cleanPost.content.trim())
+    );
+    if (existingIdx !== -1) {
+      posts[existingIdx] = cleanPost;
+    } else {
+      posts.unshift(cleanPost);
+    }
+    setStorageItem('koruna_home_posts_v3', posts);
+
+    if (isSupabaseConfigured()) {
+      try {
+        const dbPost = mapPostToDB(cleanPost);
+        const { error } = await supabase.from('posts').upsert(dbPost);
+        if (error) {
+          if (error.code === 'PGRST204' || error.message?.includes('column')) {
+            const fallbackPost = {
+              id: cleanPost.id,
+              author_name: cleanPost.authorName,
+              content: cleanPost.content,
+              category: cleanPost.category,
+              image_url: cleanPost.imageUrl || null,
+              attached_doc_preview: cleanPost.attachedDocPreview || false,
+              doc_title: cleanPost.docTitle || null,
+              author_role: cleanPost.authorRole,
+              author_avatar: cleanPost.authorAvatar,
+              author_bg_color: cleanPost.authorBgColor,
+              badge_text: cleanPost.badgeText || null,
+              likes_count: cleanPost.likesCount,
+              celebrates_count: cleanPost.celebratesCount,
+              comments: cleanPost.comments || [],
+              is_liked: cleanPost.isLiked || false,
+              is_celebrated: cleanPost.isCelebrated || false,
+              is_bookmarked: cleanPost.isBookmarked || false
+            };
+            await supabase.from('posts').upsert(fallbackPost);
+          }
+        }
+      } catch (err) {
+        console.error('Supabase savePost failed:', err);
+      }
+    }
+
+    return cleanPost;
+  },
+
+  async deletePost(id: string): Promise<void> {
+    const targetIdStr = String(id);
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from('posts').delete().eq('id', targetIdStr);
+        await supabase.from('post_reactions').delete().eq('post_id', targetIdStr);
+      } catch (err) {
+        console.error('Supabase deletePost failed:', err);
+      }
+    }
+
+    const posts = getStorageItem<PostItem[]>('koruna_home_posts_v3', []);
+    const filtered = posts.filter(p => String(p.id) !== targetIdStr);
+    setStorageItem('koruna_home_posts_v3', filtered);
+
+    let reactions = getStorageItem<PostReaction[]>('koruna_post_reactions_v1', []);
+    reactions = reactions.filter(r => String(r.postId) !== targetIdStr);
+    setStorageItem('koruna_post_reactions_v1', reactions);
   }
 };
-

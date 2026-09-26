@@ -125,12 +125,14 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
   practical_notes TEXT,
   overdue BOOLEAN DEFAULT false,
   due_date TEXT,
+  assigned_by TEXT,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   PRIMARY KEY (user_email, course_id, application_id)
 );
 
--- Ensure application_id column exists for existing instances
+-- Ensure application_id and assigned_by columns exist for existing instances
 ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS application_id INTEGER DEFAULT 0;
+ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS assigned_by TEXT;
 
 -- Enable RLS for user progress
 ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
@@ -219,4 +221,73 @@ DROP POLICY IF EXISTS "Auth Delete" ON storage.objects;
 CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'course-documents');
 CREATE POLICY "Auth Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'course-documents');
 CREATE POLICY "Auth Delete" ON storage.objects FOR DELETE USING (bucket_id = 'course-documents');
+
+-- ========================================================
+-- KORUNA ACADEMY - PHASE 3: POSTS / KORUNA LIFE FEED
+-- ========================================================
+
+-- 9. Create Posts Table
+CREATE TABLE IF NOT EXISTS public.posts (
+  id TEXT PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  author_name TEXT NOT NULL,
+  author_email TEXT,
+  author_role TEXT,
+  author_avatar TEXT,
+  author_bg_color TEXT,
+  time_ago TEXT,
+  category TEXT NOT NULL DEFAULT 'Team Updates',
+  badge_text TEXT,
+  content TEXT NOT NULL,
+  image_url TEXT,
+  attached_doc_preview BOOLEAN DEFAULT false,
+  doc_title TEXT,
+  likes_count INT DEFAULT 0,
+  celebrates_count INT DEFAULT 0,
+  comments JSONB DEFAULT '[]'::jsonb,
+  is_liked BOOLEAN DEFAULT false,
+  is_celebrated BOOLEAN DEFAULT false,
+  is_bookmarked BOOLEAN DEFAULT false,
+  is_new BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ensure all columns exist for existing database tables
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS author_email TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS author_name TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS author_role TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS author_avatar TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS author_bg_color TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS time_ago TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Team Updates';
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS badge_text TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS content TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS attached_doc_preview BOOLEAN DEFAULT false;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS doc_title TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS likes_count INT DEFAULT 0;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS celebrates_count INT DEFAULT 0;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS is_liked BOOLEAN DEFAULT false;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS is_celebrated BOOLEAN DEFAULT false;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS is_bookmarked BOOLEAN DEFAULT false;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS is_new BOOLEAN DEFAULT false;
+
+-- Enable RLS for posts
+ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies for posts if any
+DROP POLICY IF EXISTS "Allow read access to posts" ON public.posts;
+DROP POLICY IF EXISTS "Allow insert to posts" ON public.posts;
+DROP POLICY IF EXISTS "Allow update to posts" ON public.posts;
+DROP POLICY IF EXISTS "Allow delete to posts" ON public.posts;
+
+-- RLS Policies for posts
+CREATE POLICY "Allow read access to posts" ON public.posts FOR SELECT USING (true);
+CREATE POLICY "Allow insert to posts" ON public.posts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update to posts" ON public.posts FOR UPDATE USING (true);
+CREATE POLICY "Allow delete to posts" ON public.posts FOR DELETE USING (true);
+
+
 

@@ -1,6 +1,7 @@
-import React from 'react';
-import { Circle, HelpCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Circle, HelpCircle, FileText, Eye } from 'lucide-react';
 import type { Course, UserProgress, Lesson } from '../../../services/db';
+import { ResourceViewerModal, type ResourceFile } from './ResourceViewerModal';
 
 interface CourseSyllabusProps {
   studyingCourse: Course;
@@ -15,6 +16,7 @@ export const CourseSyllabus: React.FC<CourseSyllabusProps> = ({
   setActiveLessonIdx,
   userProgress
 }) => {
+  const [selectedResource, setSelectedResource] = useState<ResourceFile | null>(null);
   const currentProgress = userProgress.find(p => p.courseId === studyingCourse.id);
   const completedLessonsList = currentProgress?.completedLessons || [];
 
@@ -270,7 +272,80 @@ export const CourseSyllabus: React.FC<CourseSyllabusProps> = ({
             </button>
           </div>
         )}
+
+        {/* QUICK COURSE RESOURCES SIDEBAR ITEM */}
+        {studyingCourse.attachments && studyingCourse.attachments.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem', borderTop: '1px solid var(--udemy-border)', paddingTop: '1.25rem' }}>
+            <div style={{
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              color: 'var(--udemy-text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span>MODULE RESOURCES</span>
+              <span style={{ fontSize: '0.7rem', color: pinkThemeColor }}>{studyingCourse.attachments.length} Files</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {studyingCourse.attachments.map((file, fileIdx) => {
+                const displayName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+
+                return (
+                  <div
+                    key={fileIdx}
+                    onClick={() => setSelectedResource(file)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.5rem 0.65rem',
+                      borderRadius: '8px',
+                      background: '#f8fafc',
+                      border: '1px solid #f1f5f9',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#f8fafc'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                      <FileText size={14} style={{ color: pinkThemeColor, flexShrink: 0 }} />
+                      <span style={{
+                        fontWeight: 600,
+                        color: 'var(--udemy-text)',
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {displayName}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: pinkThemeColor, fontSize: '0.7rem', fontWeight: 700 }}>
+                      <Eye size={12} />
+                      <span>View</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Render Document Viewer Modal */}
+      {selectedResource && (
+        <ResourceViewerModal
+          file={selectedResource}
+          onClose={() => setSelectedResource(null)}
+          courseTitle={studyingCourse.title}
+        />
+      )}
     </div>
   );
 };

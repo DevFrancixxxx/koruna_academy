@@ -11,6 +11,77 @@ export interface UserSessionData {
   department?: string;
 }
 
+export const DEFAULT_INACTIVITY_TIMEOUT_MINUTES = 15;
+export const WARNING_BEFORE_TIMEOUT_SECONDS = 120;
+export const SESSION_LAST_ACTIVE_KEY = 'koruna_session_last_active';
+export const SESSION_TIMEOUT_PREF_KEY = 'koruna_session_timeout_pref';
+export const SESSION_EXPIRED_FLAG_KEY = 'koruna_session_expired_notice';
+
+export function getSessionTimeoutMinutes(): number {
+  try {
+    const saved = localStorage.getItem(SESSION_TIMEOUT_PREF_KEY);
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+  return DEFAULT_INACTIVITY_TIMEOUT_MINUTES;
+}
+
+export function setSessionTimeoutMinutes(minutes: number): void {
+  try {
+    localStorage.setItem(SESSION_TIMEOUT_PREF_KEY, minutes.toString());
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
+
+export function recordSessionActivity(): number {
+  const now = Date.now();
+  try {
+    localStorage.setItem(SESSION_LAST_ACTIVE_KEY, now.toString());
+  } catch (e) {
+    // Ignore storage errors
+  }
+  return now;
+}
+
+export function getLastSessionActivity(): number {
+  try {
+    const saved = localStorage.getItem(SESSION_LAST_ACTIVE_KEY);
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+  return Date.now();
+}
+
+export function setSessionExpiredFlag(expired: boolean, reason?: string): void {
+  try {
+    if (expired) {
+      localStorage.setItem(SESSION_EXPIRED_FLAG_KEY, reason || 'Your session expired due to inactivity. Please sign in again.');
+    } else {
+      localStorage.removeItem(SESSION_EXPIRED_FLAG_KEY);
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
+
+export function getSessionExpiredFlag(): string | null {
+  try {
+    return localStorage.getItem(SESSION_EXPIRED_FLAG_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
+
 /**
  * Sign up a new user with Supabase Auth & Role
  */
@@ -118,13 +189,14 @@ export async function signInUser(
     // Demo mode fallback
     const emailLower = email.toLowerCase();
     const preset = DEMO_PRESETS[emailLower];
+    const role: UserRole = preset ? preset.role : (emailLower.includes('admin') ? 'admin' : 'employee');
     return {
       success: true,
       data: {
         name: preset ? preset.name : (email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') || 'Jessica Taylor'),
-        role: preset ? preset.role : 'employee',
+        role,
         email,
-        department: preset ? preset.department : 'Lending'
+        department: preset ? preset.department : 'IT & Administration'
       }
     };
   }

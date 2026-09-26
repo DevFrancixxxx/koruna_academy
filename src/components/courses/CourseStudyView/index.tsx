@@ -25,6 +25,7 @@ interface CourseStudyViewProps {
   handlePracticalSubmit: (e: React.FormEvent) => void;
   userProgress: UserProgress[];
   handleMarkLessonComplete: (lessonId: string) => Promise<void>;
+  handleMarkCourseComplete?: (courseId?: string) => Promise<void>;
   setStudyingCourse: (course: Course | null) => void;
   settings: SystemSettings;
   users: DatabaseUser[];
@@ -51,6 +52,7 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
   handlePracticalSubmit,
   userProgress,
   handleMarkLessonComplete,
+  handleMarkCourseComplete,
   setStudyingCourse,
   settings,
   users,
@@ -71,6 +73,9 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
         userProgress={userProgress}
         setActiveLessonIdx={setActiveLessonIdx}
         setStudyingCourse={setStudyingCourse}
+        handleMarkCourseComplete={handleMarkCourseComplete}
+        userSession={userSession}
+        showToast={showToast}
       />
     );
   }
@@ -93,6 +98,8 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
           setQuizSubmitted={setQuizSubmitted}
           settings={settings}
           setActiveLessonIdx={setActiveLessonIdx}
+          setStudyingCourse={setStudyingCourse}
+          onDone={() => setStudyingCourse(null)}
           userSession={userSession}
           showToast={showToast}
         />

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Download, Share2, Award, CheckCircle2 } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Download, Share2, CheckCircle2, X } from 'lucide-react';
 import type { Course } from '../../services/db';
 import type { UserSessionData } from '../../services/auth';
 
@@ -8,37 +8,42 @@ interface CertificateViewProps {
   userSession: UserSessionData;
   issueDate?: string;
   certificateId?: string;
+  trainerName?: string;
   onBack: () => void;
+  onDone?: () => void;
   showToast?: (msg: string) => void;
+  isModal?: boolean;
 }
 
 export const CertificateView: React.FC<CertificateViewProps> = ({
   course,
   userSession,
-  issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-  certificateId = `KA-${course.id.toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`,
+  issueDate,
+  certificateId,
+  trainerName = 'Dr. Marcus Vance',
   onBack,
-  showToast
+  onDone,
+  showToast,
+  isModal = true
 }) => {
-  const getUserInitials = (name?: string, email?: string) => {
-    if (name) {
-      const parts = name.trim().split(' ');
-      if (parts.length >= 2) {
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      }
-      return name.substring(0, 2).toUpperCase();
-    }
-    if (email) {
-      return email.substring(0, 2).toUpperCase();
-    }
-    return 'KA';
-  };
+  const recipientName = userSession?.name || 'Jessica Timon';
+  const displayCertificateId = certificateId || `KA-${course?.code || 'MB'}-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+  const displayIssueDate = issueDate || 'June 14, 2026';
+  const displayCourseTitle = course?.title || 'Senior Mortgage: VA Loan Specialist';
 
-  const userInitials = getUserInitials(userSession?.name, userSession?.email);
-  const recipientName = userSession?.name || 'Valued Learner';
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onBack();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onBack]);
 
   const handleShare = () => {
-    const shareUrl = `${window.location.origin}/verify/certs/${certificateId}`;
+    const shareUrl = `${window.location.origin}/verify/certs/${displayCertificateId}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl);
       if (showToast) {
@@ -49,365 +54,335 @@ export const CertificateView: React.FC<CertificateViewProps> = ({
     }
   };
 
-  return (
-    <div style={{
-      width: '100%',
-      minHeight: '100vh',
-      background: '#f8fafc',
-      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* ── Top Header Navigation ── */}
-      <div 
+  const handleDone = () => {
+    const msg = `🎉 Congratulations ${recipientName}! You have successfully completed "${displayCourseTitle}"!`;
+    if (showToast) {
+      showToast(msg);
+    } else {
+      alert(msg);
+    }
+    if (onDone) {
+      onDone();
+    } else {
+      onBack();
+    }
+  };
+
+  const certContent = (
+    <>
+      {/* ── Modal Header Bar ── */}
+      <div
+        className="no-print"
+        style={{
+          width: '100%',
+          maxWidth: '960px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '1rem',
+          paddingBottom: '0.75rem',
+          borderBottom: '1px solid #f1f5f9'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{
+            background: '#fce7f3',
+            color: '#be185d',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            padding: '0.25rem 0.6rem',
+            borderRadius: '6px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Official Certificate
+          </span>
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+            {displayCourseTitle}
+          </h3>
+        </div>
+
+        <button
+          onClick={onBack}
+          className="no-print"
+          title="Close modal (Esc)"
+          style={{
+            background: '#f1f5f9',
+            border: 'none',
+            color: '#64748b',
+            cursor: 'pointer',
+            padding: '0.5rem',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#64748b'; }}
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      {/* ── Certificate Card Container ── */}
+      <div
+        id="printable-certificate"
+        style={{
+          width: '100%',
+          maxWidth: '960px',
+          borderRadius: '24px',
+          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#ffffff'
+        }}
+      >
+        {/* Base Image Template */}
+        <img
+          src="/Certificate.png"
+          alt="Certificate Template"
+          style={{
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            userSelect: 'none'
+          }}
+        />
+
+        {/* ── Dynamic Text Overlays ── */}
+
+        {/* 1. Recipient Name Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: '31%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '68%',
+          textAlign: 'center',
+          background: '#ffffff',
+          padding: '0.15rem 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <span style={{
+            fontSize: 'clamp(1.5rem, 3.8vw, 2.75rem)',
+            fontWeight: 800,
+            color: '#b8185c',
+            lineHeight: 1.15,
+            letterSpacing: '-0.01em',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            {recipientName}
+          </span>
+        </div>
+
+        {/* 2. Course Title Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: '67.2%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '65%',
+          textAlign: 'center',
+          background: '#ffffff',
+          padding: '0.1rem 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <span style={{
+            fontSize: 'clamp(0.9rem, 1.9vw, 1.35rem)',
+            fontWeight: 800,
+            color: '#111827',
+            lineHeight: 1.25,
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            {displayCourseTitle}
+          </span>
+        </div>
+
+        {/* 3. Trainer Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: '82.5%',
+          left: '26%',
+          transform: 'translateX(-50%)',
+          width: '24%',
+          textAlign: 'center',
+          background: '#ffffff',
+          padding: '0.1rem 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <span style={{
+            fontSize: 'clamp(0.75rem, 1.3vw, 0.95rem)',
+            fontWeight: 700,
+            color: '#111827',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            {trainerName}
+          </span>
+        </div>
+
+        {/* 4. Certificate Number Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: '82.5%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '28%',
+          textAlign: 'center',
+          background: '#ffffff',
+          padding: '0.1rem 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <span style={{
+            fontSize: 'clamp(0.75rem, 1.3vw, 0.95rem)',
+            fontWeight: 700,
+            color: '#111827',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            {displayCertificateId}
+          </span>
+        </div>
+
+        {/* 5. Completion Date Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: '82.5%',
+          left: '74%',
+          transform: 'translateX(-50%)',
+          width: '24%',
+          textAlign: 'center',
+          background: '#ffffff',
+          padding: '0.1rem 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <span style={{
+            fontSize: 'clamp(0.75rem, 1.3vw, 0.95rem)',
+            fontWeight: 700,
+            color: '#111827',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            {displayIssueDate}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Bottom Action Buttons ── */}
+      <div
         className="no-print"
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '1.1rem 2.5rem',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+          gap: '1rem',
+          marginTop: '1.5rem'
         }}
       >
-        {/* Back Button matching exact design in screenshot */}
+        {/* Done Button */}
         <button
-          onClick={onBack}
+          id="cert-done-btn"
+          onClick={handleDone}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '0.6rem',
-            background: 'none',
+            background: '#16a34a',
+            color: '#ffffff',
             border: 'none',
-            cursor: 'pointer',
-            color: '#475569',
+            padding: '0.75rem 2.25rem',
+            borderRadius: '12px',
+            fontWeight: 700,
             fontSize: '0.95rem',
-            fontWeight: 600,
-            padding: '0.4rem 0.25rem',
-            borderRadius: '6px',
-            transition: 'color 0.15s ease'
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(22, 163, 74, 0.3)',
+            transition: 'all 0.15s ease'
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#0f172a'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#475569'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#15803d'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.transform = 'none'; }}
         >
-          <svg 
-            width="20" 
-            height="20" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2.2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="11 17 6 12 11 7" />
-            <line x1="18" x2="6" y1="12" y2="12" />
-          </svg>
-          <span>Back to My Certificates</span>
+          <CheckCircle2 size={20} strokeWidth={2.5} />
+          <span>Done</span>
         </button>
 
-        {/* User Initials Avatar Badge */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#a82c5d',
-          color: '#ffffff',
-          width: '38px',
-          height: '38px',
-          borderRadius: '50%',
-          fontWeight: 700,
-          fontSize: '0.9rem',
-          boxShadow: '0 2px 6px rgba(168,44,93,0.3)'
-        }}>
-          {userInitials}
-        </div>
-      </div>
-
-      {/* ── Main Content Container ── */}
-      <div style={{
-        maxWidth: '1020px',
-        width: '100%',
-        margin: '0 auto',
-        padding: '2.5rem 1.5rem 4rem',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center'
-      }}>
-        {/* Header Titles */}
-        <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-          <h1 style={{
-            fontSize: '2.1rem',
-            fontWeight: 800,
-            color: '#0f172a',
-            margin: '0 0 0.5rem 0',
-            letterSpacing: '-0.02em'
-          }}>
-            Certificate of Completion
-          </h1>
-          <p style={{
-            fontSize: '0.95rem',
-            color: '#64748b',
-            margin: 0,
-            fontWeight: 500
-          }}>
-            Awarded for successfully completing {course.title}
-          </p>
-        </div>
-
-        {/* ── The Certificate Card Display Container ── */}
-        <div 
-          id="printable-certificate"
+        {/* Download PDF Button */}
+        <button
+          onClick={() => window.print()}
           style={{
-            width: '100%',
-            maxWidth: '880px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            background: '#9f1239',
+            color: '#ffffff',
+            border: 'none',
+            padding: '0.75rem 2rem',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.925rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(159, 18, 57, 0.25)',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#881337'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#9f1239'; e.currentTarget.style.transform = 'none'; }}
+        >
+          <Download size={18} strokeWidth={2.2} />
+          <span>Download PDF</span>
+        </button>
+
+        {/* Share Button */}
+        <button
+          onClick={handleShare}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.6rem',
             background: '#ffffff',
-            borderRadius: '20px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.02)',
-            padding: '3.5rem 3rem',
-            boxSizing: 'border-box',
-            position: 'relative',
-            overflow: 'hidden'
+            color: '#374151',
+            border: '1px solid #d1d5db',
+            padding: '0.75rem 2rem',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.925rem',
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            transition: 'all 0.15s ease'
           }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.borderColor = '#9ca3af'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#d1d5db'; }}
         >
-          {/* Outer Decorative Gold/Rose Inset Border Frame */}
-          <div style={{
-            border: '2px solid #f1f5f9',
-            outline: '1px dashed #cbd5e1',
-            outlineOffset: '-10px',
-            padding: '3rem 2.5rem',
-            borderRadius: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center',
-            background: 'linear-gradient(180deg, #ffffff 0%, #fafafa 100%)'
-          }}>
-
-            {/* Academy Branding Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.75rem' }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #a82c5d 0%, #b8235a 100%)',
-                color: '#ffffff',
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 10px rgba(168,44,93,0.25)'
-              }}>
-                <Award size={18} />
-              </div>
-              <span style={{
-                fontSize: '0.85rem',
-                fontWeight: 800,
-                letterSpacing: '0.18em',
-                color: '#a82c5d',
-                textTransform: 'uppercase'
-              }}>
-                Koruna Learning Portal Academy
-              </span>
-            </div>
-
-            {/* Certifies Statement */}
-            <p style={{
-              fontStyle: 'italic',
-              fontSize: '1rem',
-              color: '#64748b',
-              margin: '0 0 1.25rem 0',
-              fontFamily: 'Georgia, serif'
-            }}>
-              This credential certificate certifies that
-            </p>
-
-            {/* Recipient Full Name */}
-            <div style={{
-              fontSize: '2.2rem',
-              fontWeight: 800,
-              color: '#0f172a',
-              paddingBottom: '0.6rem',
-              marginBottom: '1.5rem',
-              borderBottom: '2.5 solid #a82c5d',
-              minWidth: '280px',
-              letterSpacing: '-0.01em'
-            }}>
-              {recipientName}
-            </div>
-
-            {/* Course Accomplishment Description */}
-            <p style={{
-              fontSize: '0.925rem',
-              color: '#475569',
-              maxWidth: '560px',
-              lineHeight: 1.6,
-              margin: '0 0 1rem 0'
-            }}>
-              has successfully fulfilled all compliance curriculum items, verified active learning comprehension, and passed evaluations for
-            </p>
-
-            {/* Course Title */}
-            <h2 style={{
-              fontSize: '1.6rem',
-              fontWeight: 800,
-              color: '#0f172a',
-              margin: '0 0 2.5rem 0',
-              lineHeight: 1.3
-            }}>
-              {course.title}
-            </h2>
-
-            {/* Signatures & Seal Section */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              width: '100%',
-              maxWidth: '680px',
-              margin: '1rem 0 2rem 0',
-              paddingTop: '1.5rem',
-              borderTop: '1px solid #f1f5f9'
-            }}>
-              {/* Trainer Signature */}
-              <div style={{ textAlign: 'center', width: '180px' }}>
-                <div style={{
-                  fontFamily: '"Brush Script MT", "Caveat", cursive, sans-serif',
-                  fontSize: '1.5rem',
-                  color: '#1e293b',
-                  lineHeight: 1,
-                  paddingBottom: '0.35rem',
-                  borderBottom: '1px solid #cbd5e1',
-                  marginBottom: '0.35rem'
-                }}>
-                  Jefrey Tatoy
-                </div>
-                <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748b' }}>
-                  Lead Underwriting Trainer
-                </div>
-              </div>
-
-              {/* Center Official Gold/Rose Badge Seal */}
-              <div style={{
-                width: '76px',
-                height: '76px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #a82c5d 0%, #831b43 100%)',
-                color: '#ffffff',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 6px 18px rgba(168,44,93,0.35), inset 0 0 0 3px rgba(255,255,255,0.3)',
-                padding: '4px'
-              }}>
-                <CheckCircle2 size={20} style={{ marginBottom: '2px' }} />
-                <span style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  VERIFIED
-                </span>
-              </div>
-
-              {/* Director Signature */}
-              <div style={{ textAlign: 'center', width: '180px' }}>
-                <div style={{
-                  fontFamily: '"Brush Script MT", "Caveat", cursive, sans-serif',
-                  fontSize: '1.5rem',
-                  color: '#1e293b',
-                  lineHeight: 1,
-                  paddingBottom: '0.35rem',
-                  borderBottom: '1px solid #cbd5e1',
-                  marginBottom: '0.35rem'
-                }}>
-                  Global Admin
-                </div>
-                <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748b' }}>
-                  Compliance Director
-                </div>
-              </div>
-            </div>
-
-            {/* Certificate ID & Verification Metadata Footer */}
-            <div style={{
-              fontSize: '0.725rem',
-              color: '#94a3b8',
-              marginTop: '0.5rem',
-              letterSpacing: '0.02em'
-            }}>
-              Certificate ID: <strong style={{ color: '#64748b' }}>{certificateId}</strong> • Issued: {issueDate} • Verification Link: verify.koruna.com/certs/{certificateId}
-            </div>
-
-          </div>
-        </div>
-
-        {/* ── Bottom Action Buttons ── */}
-        <div 
-          className="no-print"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            marginTop: '2.5rem'
-          }}
-        >
-          {/* Download PDF Button */}
-          <button
-            onClick={() => window.print()}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.55rem',
-              background: '#b8235a',
-              color: '#ffffff',
-              border: 'none',
-              padding: '0.75rem 1.75rem',
-              borderRadius: '10px',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(184,35,90,0.3)',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#a82c5d'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#b8235a'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <Download size={17} style={{ strokeWidth: 2.2 }} />
-            <span>Download PDF</span>
-          </button>
-
-          {/* Share Button */}
-          <button
-            onClick={handleShare}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.55rem',
-              background: '#ffffff',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
-              padding: '0.75rem 1.75rem',
-              borderRadius: '10px',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-          >
-            <Share2 size={17} style={{ strokeWidth: 2 }} />
-            <span>Share</span>
-          </button>
-        </div>
+          <Share2 size={18} strokeWidth={2} />
+          <span>Share</span>
+        </button>
       </div>
 
-      {/* Print Stylesheet */}
       <style>{`
         @media print {
           .no-print {
             display: none !important;
+          }
+          .koruna-modal-overlay {
+            position: static !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            padding: 0 !important;
+          }
+          .koruna-modal-content {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            max-height: none !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            background: #ffffff !important;
           }
           body {
             background: #ffffff !important;
@@ -422,6 +397,71 @@ export const CertificateView: React.FC<CertificateViewProps> = ({
           }
         }
       `}</style>
+    </>
+  );
+
+  if (isModal) {
+    return (
+      <div
+        className="koruna-modal-overlay no-print"
+        onClick={onBack}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          animation: 'fadeIn 0.2s ease-out'
+        }}
+      >
+        <div
+          className="koruna-modal-content"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            maxWidth: '1020px',
+            width: '100%',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            padding: '1.75rem',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          {certContent}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      minHeight: '100vh',
+      background: '#f4f4f5',
+      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 1rem'
+    }}>
+      {certContent}
     </div>
   );
 };
+
+
+

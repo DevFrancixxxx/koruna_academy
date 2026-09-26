@@ -1,18 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  BookOpen, Award, Sliders,
-  Search, Bell, LogOut, Settings, Play, FileText, Download, Target,
-  Trash2, CheckCircle, Menu, Clock, Zap, ArrowLeft
+  BookOpen, Award,
+  Search, LogOut,
+  CheckCircle, Menu,
+  Play, Download, FileText
 } from 'lucide-react';
 import type { UserSessionData, UserRole } from '../services/auth';
-import { dbService, type Course, type Lesson, type QuizQuestion, type UserProgress, type Badge, type PracticalSubmission, type Department, type SystemSettings, type RolePermissions, type DatabaseUser, type Notification } from '../services/db';
+import { dbService, calculateCourseLearningHours, type Course, type Lesson, type QuizQuestion, type UserProgress, type Badge, type PracticalSubmission, type Department, type SystemSettings, type RolePermissions, type DatabaseUser, type Notification } from '../services/db';
 import { AdminSuite } from './AdminSuite';
-import { TrainerDashboard } from './TrainerDashboard';
 import { LoadingModal } from './LoadingModal';
-import { CourseCard, getCourseImage } from './courses/CourseCard';
 import { CourseStudyView } from './courses/CourseStudyView';
+import { CourseCard } from './courses/CourseCard';
 import { CertificateView } from './courses/CertificateView';
 import { Sidebar } from './Sidebar';
+import { Header, HeaderActions } from './Header';
+import { UnderDevelopment } from './UnderDevelopment';
+import { KorunaHomeView } from './koruna/KorunaHomeView';
+import { KorunaAcademyDashboard } from './koruna/KorunaAcademyDashboard';
 
 interface DashboardViewProps {
   userSession: UserSessionData;
@@ -39,26 +43,78 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [permissions, setPermissions] = useState<RolePermissions[]>(dbService.getPermissions());
 
   // --- UI INTERACTION STATE ---
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [_showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRecIndex, setSelectedRecIndex] = useState(1);
   const [kbQuery, setKbQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Navigation & Sub-tabs
-  const [activeInnerTab, setActiveInnerTab] = useState<string>(
-    userSession.role === 'trainer' ? 'creator' : 'overview'
-  );
+  const [activeInnerTab, setActiveInnerTabState] = useState<string>(() => {
+    try {
+      return localStorage.getItem('koruna_active_inner_tab') || 'overview';
+    } catch (e) {
+      return 'overview';
+    }
+  });
+
+  const setActiveInnerTab = (tab: string) => {
+    setActiveInnerTabState(tab);
+    try {
+      localStorage.setItem('koruna_active_inner_tab', tab);
+    } catch (e) {
+      // Ignore
+    }
+  };
+
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isLoadingAcademy, setIsLoadingAcademy] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notificationsMenuRef = useRef<HTMLDivElement>(null);
 
+  const handleTabChange = (tab: any) => {
+    const academyTabs = [
+      'catalog',
+      'catalog_courses',
+      'learning_path',
+      'progress',
+      'certificates',
+      'skills',
+      'career_path'
+    ];
+    const isAcademyTab = academyTabs.includes(tab);
+    const isCurrentAcademy = academyTabs.includes(activeTab);
+
+    if (tab === 'catalog' || (isAcademyTab && !isCurrentAcademy)) {
+      setIsLoadingAcademy(true);
+      onTabChange(tab);
+      setTimeout(() => {
+        setIsLoadingAcademy(false);
+      }, 1200);
+    } else {
+      onTabChange(tab);
+    }
+  };
+
   // Active Studying state
-  const [studyingCourse, setStudyingCourse] = useState<Course | null>(null);
+  const [studyingCourse, setStudyingCourseState] = useState<Course | null>(null);
+
+  const setStudyingCourse = (course: Course | null) => {
+    setStudyingCourseState(course);
+    try {
+      if (course) {
+        localStorage.setItem('koruna_studying_course_id', course.id);
+      } else {
+        localStorage.removeItem('koruna_studying_course_id');
+      }
+    } catch (e) {
+      // Ignore
+    }
+  };
+
   const [studyingAssignmentId, setStudyingAssignmentId] = useState<number | null>(null);
   const [activeLessonIdx, setActiveLessonIdx] = useState<number>(0);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
@@ -83,14 +139,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     level: 'Beginner' as 'Beginner' | 'Intermediate' | 'Advanced',
     description: '',
     imgBg: '#e0f2fe',
-    attachments: [] as { name: string; url: string; size: number }[]
+    imageUrl: '',
+    trainer: userSession.name || 'Dr. Marcus Vance',
+    attachments: [] as { name: string; url: string; size: number }[],
+    contentType: 'course' as 'course' | 'document',
+    requiresCertification: true,
+    documentContent: '',
+    acknowledgmentText: 'I have read, understood, and agree to the policies and terms outlined in this document.'
   });
   const [courseLessons, setCourseLessons] = useState<Omit<Lesson, 'id'>[]>([
     { title: 'Lesson 1: Introduction', content: 'Enter lesson text here.' }
   ]);
-  const [courseQuiz, setCourseQuiz] = useState<QuizQuestion[]>([
-    { question: 'What is the correct answer?', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0 }
-  ]);
+  const [courseQuiz, setCourseQuiz] = useState<QuizQuestion[]>([]);
   const [courseModules, setCourseModules] = useState<{ id: string; title: string }[]>([
     { id: 'm1', title: 'Introduction' }
   ]);
@@ -140,6 +200,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setSettings(loadedSettings);
     setPermissions(loadedPerms);
     setNotifications(loadedNotifs);
+
+    try {
+      const savedCourseId = localStorage.getItem('koruna_studying_course_id');
+      if (savedCourseId) {
+        const found = loadedCourses.find(c => c.id === savedCourseId);
+        if (found) {
+          setStudyingCourseState(found);
+        }
+      }
+    } catch (e) { }
 
     const employees = loadedUsers.filter(u => u.role === 'employee');
     const teamProgMap: Record<string, UserProgress[]> = {};
@@ -248,9 +318,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     ? Math.round((userProgress.reduce((sum, curr) => sum + curr.progressPercent, 0)) / totalCoursesEnrolled)
     : 0;
 
-  const learningHours = 42.5 + userProgress.reduce((sum, curr) => sum + curr.completedLessons.length * 0.5, 0);
-  const xpPoints = 3240 + userProgress.reduce((sum, curr) => sum + curr.completedLessons.length * 50, 0);
-
   // ==========================================
   // EMPLOYEE CAPABILITIES & EVENTS
   // ==========================================
@@ -262,6 +329,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setQuizAnswers({});
     setQuizSubmitted(false);
     setPracticalText('');
+
+    // Update lastViewedAt timestamp for the course so it tracks recent viewing
+    const now = new Date().toISOString();
+    dbService.getUserProgress(userSession.email).then(progressList => {
+      let prog = progressList.find(
+        p => p.courseId === course.id && (applicationId === undefined || p.applicationId === applicationId)
+      );
+      if (prog) {
+        prog.lastViewedAt = now;
+        dbService.saveUserProgress(prog).then(() => loadPlatformData());
+      } else {
+        const newProg: UserProgress = {
+          userEmail: userSession.email.toLowerCase(),
+          courseId: course.id,
+          applicationId: applicationId,
+          progressPercent: 0,
+          completedLessons: [],
+          quizAttempts: 0,
+          practicalStatus: 'none',
+          overdue: false,
+          lastViewedAt: now
+        };
+        dbService.saveUserProgress(newProg).then(() => loadPlatformData());
+      }
+    }).catch(err => {
+      console.error('Error updating lastViewedAt on start study:', err);
+    });
   };
 
   const handleMarkLessonComplete = async (lessonId: string) => {
@@ -273,20 +367,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         prog.completedLessons.push(lessonId);
       }
 
-      // Calculate progress based on completed lessons
+      // Calculate progress: if course has a quiz, lessons = 70% and quiz = 30%. Otherwise lessons = 100%.
       const totalLessons = studyingCourse.lessons.length;
       const completedCount = prog.completedLessons.length;
+      const hasQuiz = Boolean(studyingCourse.quiz && studyingCourse.quiz.length > 0);
 
-      // Progress calculation: lessons comprise 70% of course weight, quiz comprises 30%
-      let calculatedProgress = Math.round((completedCount / totalLessons) * 70);
-
-      // If quiz was previously passed, add 30%
-      const threshold = settings.quizPassingThreshold;
-      if (prog.quizScore && prog.quizScore >= threshold) {
-        calculatedProgress += 30;
+      let calculatedProgress = 0;
+      if (hasQuiz) {
+        calculatedProgress = Math.round((completedCount / totalLessons) * 70);
+        const threshold = settings.quizPassingThreshold;
+        if (prog.quizScore && prog.quizScore >= threshold) {
+          calculatedProgress += 30;
+        }
+      } else {
+        calculatedProgress = Math.round((completedCount / totalLessons) * 100);
       }
 
       prog.progressPercent = Math.min(calculatedProgress, 100);
+      prog.learningHours = calculateCourseLearningHours(studyingCourse, prog.progressPercent);
 
       await dbService.saveUserProgress(prog);
       await loadPlatformData();
@@ -339,6 +437,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       } else {
         prog.progressPercent = Math.min(calculatedProgress, 70);
       }
+
+      prog.learningHours = calculateCourseLearningHours(studyingCourse, prog.progressPercent);
 
       await dbService.saveUserProgress(prog);
       await loadPlatformData();
@@ -420,15 +520,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       return;
     }
 
-    const lessonsWithIds: Lesson[] = courseLessons.map((l, i) => {
-      const currentModule = courseModules.find(m => m.id === (l.moduleId || 'm1')) || courseModules[0] || { id: 'm1', title: 'Introduction' };
-      return {
-        ...l,
-        id: editingCourseId ? `${editingCourseId}-l${i + 1}` : `c_new-l${i + 1}`,
-        moduleId: currentModule.id,
-        moduleTitle: currentModule.title
-      };
-    });
+    const isDocument = courseForm.contentType === 'document';
+    const lessonsWithIds: Lesson[] = isDocument
+      ? [{
+        id: editingCourseId ? `${editingCourseId}-l1` : `c_new-l1`,
+        title: courseForm.title,
+        content: courseForm.documentContent || courseForm.description || 'Document Acknowledgment Content',
+        moduleId: 'm1',
+        moduleTitle: 'Document'
+      }]
+      : courseLessons.map((l, i) => {
+        const currentModule = courseModules.find(m => m.id === (l.moduleId || 'm1')) || courseModules[0] || { id: 'm1', title: 'Introduction' };
+        return {
+          ...l,
+          id: editingCourseId ? `${editingCourseId}-l${i + 1}` : `c_new-l${i + 1}`,
+          moduleId: currentModule.id,
+          moduleTitle: currentModule.title
+        };
+      });
 
     const saved = await dbService.saveCourse({
       id: editingCourseId || `c-${Date.now()}`,
@@ -439,9 +548,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       level: courseForm.level,
       description: courseForm.description,
       imgBg: courseForm.imgBg,
+      imageUrl: courseForm.imageUrl,
+      trainer: courseForm.trainer || userSession.name || 'Dr. Marcus Vance',
       lessons: lessonsWithIds,
-      quiz: courseQuiz,
-      attachments: courseForm.attachments
+      quiz: isDocument ? [] : courseQuiz,
+      attachments: courseForm.attachments,
+      contentType: courseForm.contentType,
+      requiresCertification: courseForm.requiresCertification,
+      documentContent: courseForm.documentContent,
+      acknowledgmentText: courseForm.acknowledgmentText
     });
 
     // Process assignments
@@ -461,11 +576,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       })
     );
 
-    showToast(editingCourseId ? `Updated Course: "${saved.title}"` : `Created New Course: "${saved.title}"`);
+    showToast(editingCourseId ? `Updated Content: "${saved.title}"` : `Created New Content: "${saved.title}"`);
     setEditingCourseId(null);
-    setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe', attachments: [] });
+    setCourseForm({
+      title: '',
+      category: 'Mortgage',
+      code: '',
+      level: 'Beginner',
+      description: '',
+      imgBg: '#e0f2fe',
+      imageUrl: '',
+      trainer: userSession.name || 'Dr. Marcus Vance',
+      attachments: [],
+      contentType: 'course',
+      requiresCertification: true,
+      documentContent: '',
+      acknowledgmentText: 'I have read, understood, and agree to the policies and terms outlined in this document.'
+    });
     setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.', moduleId: 'm1', moduleTitle: 'Introduction' }]);
-    setCourseQuiz([{ question: 'What is the correct answer?', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0 }]);
+    setCourseQuiz([]);
     setCourseModules([{ id: 'm1', title: 'Introduction' }]);
     setAssignedUserEmails([]);
 
@@ -481,7 +610,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       level: course.level,
       description: course.description,
       imgBg: course.imgBg,
-      attachments: course.attachments || []
+      imageUrl: course.imageUrl || '',
+      trainer: course.trainer || userSession.name || 'Dr. Marcus Vance',
+      attachments: course.attachments || [],
+      contentType: course.contentType || 'course',
+      requiresCertification: course.requiresCertification !== undefined ? course.requiresCertification : true,
+      documentContent: course.documentContent || '',
+      acknowledgmentText: course.acknowledgmentText || 'I have read, understood, and agree to the policies and terms outlined in this document.'
     });
     setCourseLessons(course.lessons.map(({ id, ...l }) => l));
     setCourseQuiz(course.quiz || []);
@@ -516,11 +651,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const handleDeleteCourse = async (id: string) => {
-    if (confirm('Are you sure you want to delete this course? All employee enrollments will be wiped.')) {
-      await dbService.deleteCourse(id);
-      showToast('Course successfully deleted.');
-      await loadPlatformData();
-    }
+    await dbService.deleteCourse(id);
+    showToast('Course successfully deleted.');
+    await loadPlatformData();
   };
 
 
@@ -530,7 +663,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const removeQuizQuestionField = (idx: number) => {
-    if (courseQuiz.length === 1) return;
     setCourseQuiz(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -636,7 +768,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button className="koruna-hamburger-btn" onClick={() => setIsMobileSidebarOpen(true)} title="Open Menu">
             <Menu size={22} />
           </button>
-          <div className="koruna-mobile-logo" onClick={() => { setStudyingCourse(null); onTabChange('dashboard'); setIsMobileSidebarOpen(false); }}>
+          <div className="koruna-mobile-logo" onClick={() => { setStudyingCourse(null); handleTabChange('dashboard'); setIsMobileSidebarOpen(false); }}>
             <img
               src="/Wkorunalogo.png"
               alt="Koruna Academy Logo"
@@ -649,17 +781,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               }}
             />
           </div>
-          <div className="koruna-mobile-actions">
-            <button className="koruna-mobile-bell-btn" onClick={() => { setShowNotifications(!showNotifications); }} title="Notifications">
-              <Bell size={18} />
-              {notifications.some(n => !n.isRead) && (
-                <span className="koruna-header-bell-badge" />
-              )}
-            </button>
-            <div className="koruna-mobile-avatar" onClick={() => { onTabChange('progress'); setIsMobileSidebarOpen(false); }}>
-              {userInitials}
-            </div>
-          </div>
+          <HeaderActions
+            userSession={userSession}
+            userInitials={userInitials}
+            notifications={notifications}
+            onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
+            onNotificationClick={handleNotificationClick}
+            onDeleteNotification={handleDeleteNotification}
+            onTabChange={handleTabChange}
+            onSignOutClick={handleSignOutClick}
+            formatNotificationTime={formatNotificationTime}
+            showNotifications={showNotifications}
+            setShowNotifications={setShowNotifications}
+          />
         </div>
       )}
 
@@ -670,7 +804,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           setIsMobileSidebarOpen={setIsMobileSidebarOpen}
           userSession={userSession}
           activeTab={activeTab}
-          onTabChange={onTabChange}
+          onTabChange={handleTabChange}
           studyingCourse={studyingCourse}
           setStudyingCourse={setStudyingCourse}
           setActiveInnerTab={setActiveInnerTab}
@@ -680,203 +814,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       )}
 
       {/* 2. MAIN CONTENT AREA */}
-      <main className="koruna-dashboard-content" style={{ overflowY: 'auto', padding: isImmersivePlayer ? 0 : undefined }}>
+      <main className="koruna-dashboard-content" style={{ overflowY: 'auto', padding: 0 }}>
 
         {/* COMMON TOP HEADER */}
-        {!isImmersivePlayer ? (
-          <header className="koruna-content-header">
-            {activeTab === 'dashboard' && !studyingCourse ? (
-              <div className="koruna-greeting-area">
-                <h1>Welcome back, {userSession.name.split(' ')[0]}</h1>
-                <p className="koruna-greeting-subtext">
-                  You're on your <span className="koruna-streak-highlight">12-day</span> Learning streak!
-                </p>
-              </div>
-            ) : (
-              <div className="koruna-greeting-area" />
-            )}
+        <Header
+          userSession={userSession}
+          userInitials={userInitials}
+          notifications={notifications}
+          onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
+          onNotificationClick={handleNotificationClick}
+          onDeleteNotification={handleDeleteNotification}
+          onTabChange={handleTabChange}
+          onSignOutClick={handleSignOutClick}
+          formatNotificationTime={formatNotificationTime}
+          isImmersivePlayer={isImmersivePlayer}
+          studyingCourse={studyingCourse}
+          activeLessonIdx={activeLessonIdx}
+          onBackFromStudy={() => setActiveLessonIdx(-1)}
+          showNotifications={showNotifications}
+          setShowNotifications={setShowNotifications}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          activeTab={activeTab}
+          setActiveInnerTab={setActiveInnerTab}
+        />
 
-            <div className="koruna-header-right">
-              <div className="koruna-header-search">
-                <Search className="koruna-header-search-icon" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search courses, skills, certificates..."
-                  className="koruna-header-search-input"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (activeTab !== 'catalog' && e.target.value !== '') {
-                      onTabChange('catalog');
-                    }
-                  }}
-                />
-              </div>
-
-              <div style={{ position: 'relative' }} ref={notificationsMenuRef}>
-                <button
-                  className="koruna-header-bell-btn"
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  title="Notifications"
-                >
-                  <Bell size={18} />
-                  {notifications.some(n => !n.isRead) && (
-                    <span className="koruna-header-bell-badge" />
-                  )}
-                </button>
-
-                {showNotifications && (
-                  <div className="koruna-notifications-dropdown">
-                    <div className="koruna-notifications-header">
-                      <span className="koruna-notifications-title">Notifications</span>
-                      {notifications.some(n => !n.isRead) && (
-                        <button
-                          className="koruna-notifications-read-all"
-                          onClick={handleMarkAllNotificationsAsRead}
-                        >
-                          Mark all as read
-                        </button>
-                      )}
-                    </div>
-
-                    {notifications.length === 0 ? (
-                      <div className="koruna-notifications-empty">
-                        <Bell size={32} style={{ opacity: 0.3 }} />
-                        <span className="koruna-notifications-empty-text">
-                          You're all caught up!
-                        </span>
-                      </div>
-                    ) : (
-                      <ul className="koruna-notifications-list">
-                        {notifications.map(notif => (
-                          <li
-                            key={notif.id}
-                            className={`koruna-notifications-item ${!notif.isRead ? 'unread' : ''}`}
-                            onClick={() => handleNotificationClick(notif)}
-                          >
-                            <div className="koruna-notifications-icon-container">
-                              <Bell size={14} />
-                            </div>
-                            <div className="koruna-notifications-item-content">
-                              <span className="koruna-notifications-item-title">{notif.title}</span>
-                              <span className="koruna-notifications-item-message">{notif.message}</span>
-                              <span className="koruna-notifications-item-time">
-                                {formatNotificationTime(notif.createdAt)}
-                              </span>
-                            </div>
-                            {!notif.isRead && (
-                              <span className="koruna-notifications-unread-dot" />
-                            )}
-                            <button
-                              className="koruna-notifications-item-delete"
-                              onClick={(e) => handleDeleteNotification(e, notif.id)}
-                              title="Delete notification"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="koruna-header-profile-dropdown" ref={profileMenuRef}>
-                <div
-                  className="koruna-header-avatar"
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                >
-                  {userInitials}
-                </div>
-
-                {showProfileMenu && (
-                  <div className="koruna-profile-menu">
-                    <div className="koruna-profile-menu-info">
-                      <div className="koruna-profile-menu-name">{userSession.name}</div>
-                      <div className="koruna-profile-menu-email">{userSession.email}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--koruna-primary)', fontWeight: 800, textTransform: 'uppercase', marginTop: '0.25rem' }}>
-                        Role: {roleDisplayNames[userSession.role] || userSession.role}
-                      </div>
-                      {userSession.department && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)' }}>
-                          Dept: {userSession.department}
-                        </div>
-                      )}
-                    </div>
-                    <button className="koruna-profile-menu-item" onClick={() => { onTabChange('progress'); setShowProfileMenu(false); }}>
-                      <Sliders size={14} /> My Profile & Progress
-                    </button>
-                    <button className="koruna-profile-menu-item" onClick={() => { onTabChange('certificates'); setShowProfileMenu(false); }}>
-                      <Award size={14} /> My Certificates
-                    </button>
-                    <button className="koruna-profile-menu-item" style={{ color: '#ef4444' }} onClick={handleSignOutClick}>
-                      <LogOut size={14} /> Sign out
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </header>
-        ) : (studyingCourse && activeLessonIdx >= studyingCourse.lessons.length) ? null : (
-          <header style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: '#ffffff',
-            borderBottom: '1px solid var(--udemy-border)',
-            padding: '0.8rem 2.5rem',
-            width: '100%',
-            height: '72px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
-            flexShrink: 0
-          }}>
-            <button
-              className="btn-koruna-outline"
-              onClick={() => setActiveLessonIdx(-1)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                height: '40px',
-                padding: '0 1.25rem',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                fontWeight: 600
-              }}
-            >
-              <ArrowLeft size={16} />
-              Go Back
-            </button>
-
-            <div style={{ fontSize: '0.9rem', color: 'var(--udemy-text-muted)', fontWeight: 600, fontFamily: 'var(--font-heading)' }}>
-              {studyingCourse.title} / <span style={{ color: 'var(--udemy-text)' }}>
-                {activeLessonIdx < studyingCourse.lessons.length ? (
-                  studyingCourse.lessons[activeLessonIdx].moduleTitle || 'Module'
-                ) : (
-                  'Final Assessment'
-                )}
-              </span>
-            </div>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#a82c5d',
-              color: '#ffffff',
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              fontWeight: 700,
-              fontSize: '0.9rem'
-            }}>
-              {userInitials}
-            </div>
-          </header>
-        )}
-
-        {/* ACTIVE STUDYING IMMERSIVE VIEW */}
         {studyingCourse ? (
           isImmersivePlayer ? (
             <div style={{ padding: '2rem 2.5rem 3rem 2.5rem' }}>
@@ -933,409 +895,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               showToast={showToast}
             />
           )
-        ) : userSession.role === 'admin' && activeTab !== 'dashboard' ? (
-          /* UNDER DEVELOPMENT VIEW FOR ADMIN */
-          <div className="koruna-subview-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '2rem' }}>
-            <div style={{ background: '#fef3c7', color: '#d97706', padding: '1.5rem', borderRadius: '50%', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Clock size={48} />
-            </div>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--koruna-text-dark)', marginBottom: '0.75rem', fontFamily: 'var(--font-heading)' }}>
-              Module Under Development
-            </h2>
-            <p style={{ color: 'var(--koruna-text-muted)', fontSize: '1.05rem', maxWidth: '480px', lineHeight: 1.6, marginBottom: '2rem' }}>
-              This tab is currently under active construction for Administrator accounts. Please navigate to the main **Admin Dashboard** to manage users, settings, and courses.
-            </p>
-            <button className="btn-koruna-solid" onClick={() => onTabChange('dashboard')}>
-              Return to Admin Dashboard
-            </button>
-          </div>
         ) : (
           /* REGULAR TAB ROUTING */
           <>
-            {/* TAB 1: MAIN DASHBOARD */}
-            {activeTab === 'dashboard' && (
-              <>
-                {userSession.role === 'trainer' ? (
-                  <TrainerDashboard
-                    courses={courses}
-                    handleStartStudy={handleStartStudy}
-                    handleStartEditCourse={handleStartEditCourse}
-                    setEditingCourseId={setEditingCourseId}
-                    setCourseForm={setCourseForm}
-                    setCourseLessons={setCourseLessons}
-                    setCourseQuiz={setCourseQuiz}
-                    setCourseModules={setCourseModules}
-                    setAssignedUserEmails={setAssignedUserEmails}
-                    onTabChange={onTabChange}
-                    setActiveInnerTab={setActiveInnerTab}
-                  />
-                ) : userSession.role === 'admin' ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #311042 100%)', color: '#ffffff', padding: '2.5rem', borderRadius: '16px', boxShadow: 'var(--shadow-lg)', position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', right: '-40px', bottom: '-40px', opacity: 0.08, transform: 'rotate(15deg)' }}>
-                        <Settings size={280} color="#ffffff" />
-                      </div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#f43f5e', background: 'rgba(244, 63, 94, 0.15)', padding: '0.35rem 0.75rem', borderRadius: '9999px', letterSpacing: '0.05em' }}>
-                        System Administration Portal
-                      </span>
-                      <h2 style={{ fontSize: '2rem', fontWeight: 800, marginTop: '1rem', marginBottom: '0.5rem', color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
-                        Enterprise Administrator Dashboard
-                      </h2>
-                      <p style={{ color: '#cbd5e1', fontSize: '0.95rem', maxWidth: '600px', lineHeight: 1.6 }}>
-                        Monitor enterprise directory growth, configure universal curriculum passing thresholds, manage fine-grained user capability matrices, and audit portal platform settings.
-                      </p>
-                    </div>
-
-                    {/* Admin Stats Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                      <div className="koruna-metric-card koruna-metric-card-white" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.25rem', backgroundColor: '#ffffff', boxShadow: 'var(--shadow-md)' }}>
-                        <div style={{ background: '#f5f3ff', color: '#7c3aed', padding: '0.75rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Sliders size={22} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--koruna-text-dark)' }}>{users.length}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)', fontWeight: 600 }}>Active Users</div>
-                        </div>
-                      </div>
-
-                      <div className="koruna-metric-card koruna-metric-card-white" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.25rem', backgroundColor: '#ffffff', boxShadow: 'var(--shadow-md)' }}>
-                        <div style={{ background: '#ecfdf5', color: '#10b981', padding: '0.75rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <BookOpen size={22} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--koruna-text-dark)' }}>{courses.length}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)', fontWeight: 600 }}>Catalog Courses</div>
-                        </div>
-                      </div>
-
-                      <div className="koruna-metric-card koruna-metric-card-white" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.25rem', backgroundColor: '#ffffff', boxShadow: 'var(--shadow-md)' }}>
-                        <div style={{ background: '#eff6ff', color: '#3b82f6', padding: '0.75rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Target size={22} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--koruna-text-dark)' }}>{departments.length}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)', fontWeight: 600 }}>Departments</div>
-                        </div>
-                      </div>
-
-                      <div className="koruna-metric-card koruna-metric-card-white" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.25rem', backgroundColor: '#ffffff', boxShadow: 'var(--shadow-md)' }}>
-                        <div style={{ background: '#fff7ed', color: '#f97316', padding: '0.75rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Award size={22} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--koruna-text-dark)' }}>{settings.quizPassingThreshold}%</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)', fontWeight: 600 }}>Passing Score</div>
-                        </div>
-                      </div>
-
-                      <div className="koruna-metric-card koruna-metric-card-white" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.25rem', backgroundColor: '#ffffff', boxShadow: 'var(--shadow-md)' }}>
-                        <div style={{ background: '#fff1f2', color: '#f43f5e', padding: '0.75rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Zap size={22} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--koruna-text-dark)' }}>{practicals.filter(p => p.status === 'pending').length}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)', fontWeight: 600 }}>Pending Cases</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--koruna-border-color)', paddingTop: '2rem' }}>
-                      <AdminSuite
-                        userSession={userSession}
-                        userPerms={userPerms}
-                        activeInnerTab={activeInnerTab}
-                        setActiveInnerTab={setActiveInnerTab}
-                        courses={courses}
-                        users={users}
-                        departments={departments}
-                        permissions={permissions}
-                        settings={settings}
-                        teamProgress={teamProgress}
-                        editingCourseId={editingCourseId}
-                        assignedUserEmails={assignedUserEmails}
-                        setAssignedUserEmails={setAssignedUserEmails}
-                        courseForm={courseForm}
-                        setCourseForm={setCourseForm}
-                        courseLessons={courseLessons}
-                        setCourseLessons={setCourseLessons}
-                        courseQuiz={courseQuiz}
-                        setCourseQuiz={setCourseQuiz}
-                        courseModules={courseModules}
-                        setCourseModules={setCourseModules}
-                        adminUserForm={adminUserForm}
-                        setAdminUserForm={setAdminUserForm}
-                        newDeptName={newDeptName}
-                        setNewDeptName={setNewDeptName}
-                        handleSaveCourse={handleSaveCourse}
-                        handleStartEditCourse={handleStartEditCourse}
-                        handleDeleteCourse={handleDeleteCourse}
-                        handleAssignCourse={handleAssignCourse}
-                        handleCreateUser={handleCreateUser}
-                        handleAddDept={handleAddDept}
-                        handleUpdateUserDept={handleUpdateUserDept}
-                        handleUpdateUserRole={handleUpdateUserRole}
-                        handleDeleteUser={handleDeleteUser}
-                        handlePermissionToggle={handlePermissionToggle}
-                        handleSaveSettings={handleSaveSettings}
-                        addQuizQuestionField={addQuizQuestionField}
-                        removeQuizQuestionField={removeQuizQuestionField}
-                        setEditingCourseId={setEditingCourseId}
-                        showToast={showToast}
-                        loadPlatformData={loadPlatformData}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  /* REGULAR DASHBOARD VIEW FOR OTHER ROLES */
-                  <>
-                    {/* METRICS ROW */}
-                    {/* METRICS ROW (Matching user public icons design) */}
-                    <div className="koruna-dashboard-stats-container">
-                      {/* TOP ROW: OVERALL PROGRESS & CURRENT COURSE */}
-                      <div className="koruna-stats-top-row">
-                        <div className="koruna-stat-card koruna-stat-card-burgundy">
-                          <div className="koruna-stat-value-large">{overallProgressPercent > 0 ? overallProgressPercent : 68}%</div>
-                          <div className="koruna-stat-label-burgundy">OVERALL PROGRESS</div>
-                        </div>
-
-                        <div className="koruna-stat-card">
-                          <img src="/courseicon.png" alt="Current Course" className="koruna-stat-icon-img" />
-                          <div className="koruna-stat-info">
-                            <div className="koruna-stat-course-title">
-                              {courses.find(c => c.id === userProgress[0]?.courseId)?.title || courses[0]?.title || 'Mortgage Level 2: Underwriting Fundamentals'}
-                            </div>
-                            <div className="koruna-stat-label-gray">CURRENT COURSE</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* BOTTOM ROW: CERTIFICATES, LEARNING HOURS, XP POINTS */}
-                      <div className="koruna-stats-bottom-row">
-                        <div className="koruna-stat-card">
-                          <img src="/certificateicon.png" alt="Certificates" className="koruna-stat-icon-img" />
-                          <div className="koruna-stat-info">
-                            <div className="koruna-stat-value-medium">
-                              {userProgress.filter(p => p.progressPercent === 100).length || 9}
-                            </div>
-                            <div className="koruna-stat-label-gray">CERTIFICATES</div>
-                          </div>
-                        </div>
-
-                        <div className="koruna-stat-card">
-                          <img src="/learninghours.png" alt="Learning Hours" className="koruna-stat-icon-img" />
-                          <div className="koruna-stat-info">
-                            <div className="koruna-stat-value-medium">{learningHours.toFixed(1)}h</div>
-                            <div className="koruna-stat-label-gray">LEARNING HOURS</div>
-                          </div>
-                        </div>
-
-                        <div className="koruna-stat-card">
-                          <img src="/xppointsicon.png" alt="XP Points" className="koruna-stat-icon-img" />
-                          <div className="koruna-stat-info">
-                            <div className="koruna-stat-value-medium">{xpPoints.toLocaleString()}</div>
-                            <div className="koruna-stat-label-gray">XP POINTS</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* CONTINUE LEARNING SECTION */}
-                    <section className="koruna-dashboard-section">
-                      <h2 className="koruna-section-title">Continue Learning</h2>
-                      {userProgress.length > 0 ? (
-                        (() => {
-                          const activeProg =
-                            userProgress.find(p => p.dueDate && p.progressPercent < 100) ||
-                            userProgress.find(p => p.progressPercent > 0 && p.progressPercent < 100) ||
-                            userProgress[0];
-                          const course = courses.find(c => c.id === activeProg.courseId);
-                          if (!course) return null
-                          return (
-                            <div className="koruna-continue-learning-card">
-                              <div className="koruna-continue-thumb-wrap" style={{ overflow: 'hidden', borderRadius: '8px', position: 'relative' }}>
-                                <img
-                                  src={getCourseImage(course)}
-                                  alt={course.title}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
-                                />
-                              </div>
-                              <div className="koruna-continue-details">
-                                <div className="koruna-continue-header-row">
-                                  <span className={`koruna-badge-pill ${activeProg.progressPercent === 100 ? 'koruna-badge-completed' : 'koruna-badge-in-progress'}`}>
-                                    {activeProg.progressPercent === 100 ? 'Completed' : 'In Progress'}
-                                  </span>
-                                  <h3 className="koruna-course-title-main">{course.title}</h3>
-                                </div>
-                                <div className="koruna-continue-progress-row">
-                                  <div className="koruna-progress-bar-track">
-                                    <div className="koruna-progress-bar-fill" style={{ width: `${activeProg.progressPercent}%` }}></div>
-                                  </div>
-                                  <span className="koruna-progress-percent">{activeProg.progressPercent}%</span>
-                                </div>
-                                <div className="koruna-continue-trainer">Course Code: {course.code} • Category: {course.category}</div>
-                              </div>
-                              <button
-                                className="btn-continue-course"
-                                onClick={() => {
-                                  const activeProg =
-                                    userProgress.find(p => p.dueDate && p.progressPercent < 100) ||
-                                    userProgress.find(p => p.progressPercent > 0 && p.progressPercent < 100) ||
-                                    userProgress[0];
-                                  handleStartStudy(course, activeProg?.applicationId);
-                                }}
-                              >
-                                Continue Course
-                              </button>
-                            </div>
-                          );
-                        })()
-                      ) : (
-                        <p style={{ color: 'var(--koruna-text-muted)' }}>No courses enrolled yet. Please check the Catalogue.</p>
-                      )}
-                    </section>
-
-                    {/* ASSIGNED COURSES SECTION */}
-                    {(() => {
-                      const assigned = userProgress
-                        .filter(p => p.dueDate)
-                        .map(p => {
-                          const course = courses.find(c => c.id === p.courseId);
-                          return course ? { ...course, prog: p } : null;
-                        })
-                        .filter((x): x is (Course & { prog: UserProgress }) => x !== null);
-                      const isEmployee = userSession.role === 'employee';
-                      if (isEmployee && assigned.length === 0) return null;
-
-                      const coursesToDisplay = isEmployee
-                        ? assigned
-                        : courses.map(c => {
-                          const prog = userProgress.find(p => p.courseId === c.id && p.dueDate) || userProgress.find(p => p.courseId === c.id);
-                          return { ...c, prog };
-                        });
-                      return (
-                        <section className="koruna-dashboard-section">
-                          <div className="koruna-section-header">
-                            <h2 className="koruna-section-title">Assigned Courses</h2>
-                            <span className="koruna-section-link" onClick={() => onTabChange('catalog')}>View all</span>
-                          </div>
-
-                          <div className="koruna-assigned-courses-grid">
-                            {coursesToDisplay.map((course, idx) => {
-                              const percent = course.prog ? course.prog.progressPercent : 0;
-                              const keyId = course.prog?.applicationId ? `${course.id}-${course.prog.applicationId}` : `${course.id}-${idx}`;
-                              return (
-                                <CourseCard
-                                  key={keyId}
-                                  course={course}
-                                  variant="employee"
-                                  percent={percent}
-                                  applicationId={course.prog?.applicationId}
-                                  onActionClick={() => handleStartStudy(course, course.prog?.applicationId)}
-                                />
-                              );
-                            })}
-                          </div>
-                        </section>
-                      );
-                    })()}
-
-                    {/* BOTTOM SPLIT GRID */}
-                    <div className="koruna-bottom-split">
-                      {/* RECOMMENDED FOR YOU (LEFT) */}
-                      <div className="koruna-bottom-left-col">
-                        <h2 className="koruna-section-title">Recommended For You</h2>
-                        <div className="koruna-recommended-list">
-                          {courses.slice(1, 4).map((rec, index) => (
-                            <div
-                              key={rec.id}
-                              className={`koruna-recommended-card ${selectedRecIndex === index ? 'selected' : ''}`}
-                              onClick={() => setSelectedRecIndex(index)}
-                            >
-                              <div className="koruna-rec-thumb-wrap" style={{ overflow: 'hidden', borderRadius: '6px', position: 'relative' }}>
-                                <img
-                                  src={getCourseImage(rec)}
-                                  alt={rec.title}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/course_card_default.png'; }}
-                                />
-                              </div>
-                              <div className="koruna-rec-details">
-                                <div className="koruna-rec-details-header">
-                                  <span className="koruna-badge-pill koruna-badge-lending" style={{ fontSize: '0.65rem' }}>{rec.category}</span>
-                                </div>
-                                <div className="koruna-rec-title">{rec.title}</div>
-                                <div className="koruna-rec-meta">{rec.lessons.length} lessons • Rating ⭐ {rec.rating}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* DEADLINES & CERTIFICATES (RIGHT) */}
-                      <div className="koruna-bottom-right-col">
-                        {/* UPCOMING DEADLINES */}
-                        <div className="koruna-deadlines-card">
-                          <div className="koruna-deadline-title">Upcoming & Overdue Deadlines</div>
-                          <div className="koruna-deadlines-list">
-                            {userProgress.filter(p => p.overdue || p.dueDate).map((p, idx) => {
-                              const course = courses.find(c => c.id === p.courseId);
-                              if (!course) return null;
-                              return (
-                                <div key={idx} className="koruna-deadline-item">
-                                  <div className="koruna-deadline-info">
-                                    <div className="koruna-deadline-name">{course.code} Quiz / Homework</div>
-                                    <div className="koruna-deadline-due" style={{ color: p.overdue ? '#ef4444' : 'var(--koruna-text-muted)' }}>
-                                      {p.overdue ? 'Training Overdue!' : `Due on ${p.dueDate}`}
-                                    </div>
-                                  </div>
-                                  <span className={`koruna-badge-pill ${p.overdue ? 'koruna-badge-overdue' : 'koruna-badge-upcoming'}`}>
-                                    {p.overdue ? 'Overdue' : 'Upcoming'}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                            {userProgress.filter(p => p.overdue || p.dueDate).length === 0 && (
-                              <div style={{ fontSize: '0.8rem', color: 'var(--koruna-text-muted)', textAlign: 'center', padding: '1rem' }}>
-                                No training deadlines pending.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* RECENT CERTIFICATES */}
-                        <div className="koruna-certs-card">
-                          <div className="koruna-certs-title">Recent Certificates</div>
-                          <div className="koruna-certs-list">
-                            {userProgress.filter(p => p.progressPercent === 100).map((p, idx) => {
-                              const course = courses.find(c => c.id === p.courseId);
-                              if (!course) return null;
-                              const cert = getCertData(p.courseId);
-                              return (
-                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0.4rem 0', cursor: 'pointer' }} onClick={() => setViewingCertificate({ course, date: cert.date, id: cert.id })}>
-                                  <div className="koruna-cert-item" style={{ border: 'none', padding: 0 }}>
-                                    <div className="koruna-cert-name" style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'underline' }}>{course.title}</div>
-                                  </div>
-                                  <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.8)' }}>Issued: {cert.date}</div>
-                                </div>
-                              );
-                            })}
-                            {userProgress.filter(p => p.progressPercent === 100).length === 0 && (
-                              <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.85)', textAlign: 'center', padding: '1rem 0' }}>
-                                Complete courses to unlock certificates.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </>
+            {/* TAB 1: MAIN DASHBOARD / HOME */}
+            {(activeTab === 'dashboard' || activeTab === 'home') && (
+              <KorunaHomeView
+                userSession={userSession}
+                onTabChange={handleTabChange}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+              />
             )}
 
-            {/* TAB 2: COURSE CATALOGUE */}
+            {/* TAB 2: KORUNA ACADEMY DASHBOARD */}
             {activeTab === 'catalog' && (
+              <KorunaAcademyDashboard
+                userSession={userSession}
+                courses={courses}
+                userProgress={userProgress}
+                onStartStudy={handleStartStudy}
+                onTabChange={handleTabChange}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+              />
+            )}
+
+            {/* TAB 2B: COURSE CATALOGUE */}
+            {activeTab === 'catalog_courses' && (
               <div className="koruna-subview-wrapper">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
@@ -1350,7 +937,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       style={{ height: '40px', padding: '0 1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
                       onClick={() => {
                         setEditingCourseId(null);
-                        setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe', attachments: [] });
+                        setCourseForm({
+                          title: '',
+                          category: 'Mortgage',
+                          code: '',
+                          level: 'Beginner',
+                          description: '',
+                          imgBg: '#e0f2fe',
+                          imageUrl: '',
+                          trainer: userSession.name || 'Dr. Marcus Vance',
+                          attachments: [],
+                          contentType: 'course',
+                          requiresCertification: true,
+                          documentContent: '',
+                          acknowledgmentText: 'I have read, understood, and agree to the policies and terms outlined in this document.'
+                        });
                         setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.' }]);
                         setCourseQuiz([{ question: 'What is the correct answer?', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0 }]);
                         setAssignedUserEmails([]);
@@ -1421,43 +1022,57 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 )}
 
                 {(() => {
-                  const assigned = userProgress
-                    .filter(p => p.dueDate)
-                    .map(p => {
-                      const course = courses.find(c => c.id === p.courseId);
-                      return course ? { ...course, prog: p } : null;
-                    })
-                    .filter((x): x is (Course & { prog: UserProgress }) => x !== null);
-                  const isEmployee = userSession.role === 'employee';
-                  if (isEmployee && assigned.length === 0) return null;
+                  const assigned = courses.filter(c => {
+                    const prog = userProgress.find(
+                      p => p.courseId === c.id && (
+                        (userSession.email && p.userEmail.toLowerCase() === userSession.email.toLowerCase()) ||
+                        !p.userEmail
+                      )
+                    ) || userProgress.find(p => p.courseId === c.id);
 
-                  const coursesToDisplay = isEmployee
-                    ? assigned
-                    : courses.map(c => {
-                      const prog = userProgress.find(p => p.courseId === c.id && p.dueDate) || userProgress.find(p => p.courseId === c.id);
-                      return { ...c, prog };
-                    });
+                    const hasAssignedProgress = !!(prog && (prog.dueDate || prog.assignedBy));
+                    const hasAssignedCourseFlag = !!c.isAssigned || (
+                      !!c.assignedUsers && c.assignedUsers.some(a =>
+                        (userSession.id && String(a.userId) === String(userSession.id)) ||
+                        (userSession.email && a.userId.toLowerCase() === userSession.email.toLowerCase())
+                      )
+                    );
+
+                    return hasAssignedProgress || hasAssignedCourseFlag;
+                  }).map(c => {
+                    const prog = userProgress.find(p => p.courseId === c.id);
+                    return { ...c, prog };
+                  });
+
                   return (
                     <>
                       <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--koruna-text-dark)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <BookOpen size={20} style={{ color: 'var(--koruna-primary)' }} />
-                        My Assigned Learning Pathways
+                        My Assigned Courses & Learning Pathways
                       </h3>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '1.5rem' }}>
-                        {coursesToDisplay.map((c, idx) => {
-                          const keyId = c.prog?.applicationId ? `${c.id}-${c.prog.applicationId}` : `${c.id}-${idx}`;
-                          return (
-                            <CourseCard
-                              key={keyId}
-                              course={c}
-                              variant="simple"
-                              applicationId={c.prog?.applicationId}
-                              onActionClick={() => handleStartStudy(c, c.prog?.applicationId)}
-                            />
-                          );
-                        })}
-                      </div>
+                      {assigned.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '1.5rem' }}>
+                          {assigned.map((c, idx) => {
+                            const keyId = c.prog?.applicationId ? `${c.id}-${c.prog.applicationId}` : `${c.id}-${idx}`;
+                            return (
+                              <CourseCard
+                                key={keyId}
+                                course={c}
+                                variant="simple"
+                                applicationId={c.prog?.applicationId}
+                                onActionClick={() => handleStartStudy(c, c.prog?.applicationId)}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ background: '#ffffff', borderRadius: '12px', padding: '3rem', textAlign: 'center', color: '#64748b', border: '1px dashed #cbd5e1' }}>
+                          <BookOpen size={36} style={{ color: 'var(--koruna-primary)', marginBottom: '1rem', opacity: 0.5 }} />
+                          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>No Assigned Courses Found</h4>
+                          <p style={{ fontSize: '0.9rem', margin: 0 }}>You currently have no courses assigned to your learning path.</p>
+                        </div>
+                      )}
                     </>
                   );
                 })()}
@@ -1547,30 +1162,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <h2 className="koruna-section-title" style={{ marginBottom: '1.5rem' }}>My Earned Certificates</h2>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                  {userProgress.filter(p => p.progressPercent === 100).map((p) => {
+                  {userProgress
+                    .filter(p => {
+                      const course = courses.find(c => c.id === p.courseId);
+                      return p.progressPercent === 100 && course?.requiresCertification !== false;
+                    })
+                    .map((p) => {
+                      const course = courses.find(c => c.id === p.courseId);
+                      if (!course) return null;
+                      const cert = getCertData(p.courseId);
+                      return (
+                        <div key={p.courseId} style={{ border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative', boxShadow: 'var(--koruna-card-shadow)', background: '#ffffff' }}>
+                          <Award size={36} style={{ color: 'var(--koruna-primary)' }} />
+                          <div>
+                            <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--koruna-text-dark)', marginBottom: '0.25rem' }}>{course.title}</h4>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--koruna-text-muted)' }}>Issued: {cert.date} • ID: {cert.id}</p>
+                          </div>
+                          <div style={{ marginTop: 'auto', display: 'flex', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--koruna-border-color)' }}>
+                            <button
+                              className="btn-koruna-outline"
+                              style={{ flex: 1, padding: '0.4rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
+                              onClick={() => setViewingCertificate({ course, date: cert.date, id: cert.id })}
+                            >
+                              <Download size={14} /> View Certificate
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  {userProgress.filter(p => {
                     const course = courses.find(c => c.id === p.courseId);
-                    if (!course) return null;
-                    const cert = getCertData(p.courseId);
-                    return (
-                      <div key={p.courseId} style={{ border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative', boxShadow: 'var(--koruna-card-shadow)', background: '#ffffff' }}>
-                        <Award size={36} style={{ color: 'var(--koruna-primary)' }} />
-                        <div>
-                          <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--koruna-text-dark)', marginBottom: '0.25rem' }}>{course.title}</h4>
-                          <p style={{ fontSize: '0.8rem', color: 'var(--koruna-text-muted)' }}>Issued: {cert.date} • ID: {cert.id}</p>
-                        </div>
-                        <div style={{ marginTop: 'auto', display: 'flex', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--koruna-border-color)' }}>
-                          <button
-                            className="btn-koruna-outline"
-                            style={{ flex: 1, padding: '0.4rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
-                            onClick={() => setViewingCertificate({ course, date: cert.date, id: cert.id })}
-                          >
-                            <Download size={14} /> View Certificate
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {userProgress.filter(p => p.progressPercent === 100).length === 0 && (
+                    return p.progressPercent === 100 && course?.requiresCertification !== false;
+                  }).length === 0 && (
                     <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: 'var(--koruna-text-muted)' }}>
                       Complete your enrolled training courses to earn official certificates.
                     </div>
@@ -1612,7 +1235,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             )}
 
             {/* TAB 7: CAREER PATH */}
-            {activeTab === 'career' && (
+            {(activeTab === 'career' || activeTab === 'career_path') && (
               <div className="koruna-subview-wrapper">
                 <h2 className="koruna-section-title" style={{ marginBottom: '1rem' }}>My Career & Promotional Progression</h2>
                 <p style={{ color: 'var(--koruna-text-muted)', fontSize: '0.9rem', marginBottom: '2.5rem' }}>
@@ -1935,6 +1558,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 loadPlatformData={loadPlatformData}
               />
             )}
+
+            {/* FALLBACK FOR UNIMPLEMENTED STUB TABS */}
+            {['feed', 'rewards', 'engage', 'my_koruna', 'notifications', 'settings'].includes(activeTab) && (
+              <UnderDevelopment
+                title={
+                  activeTab === 'feed' ? 'Koruna Feed' :
+                    activeTab === 'rewards' ? 'Recognition & Rewards' :
+                      activeTab === 'engage' ? 'Clubs & Engagement' :
+                        activeTab === 'my_koruna' ? 'My Koruna' :
+                          activeTab === 'notifications' ? 'Notifications Center' :
+                            activeTab === 'settings' ? 'Account Settings' :
+                              'Module Under Development'
+                }
+                description="This module is currently under active development and will be available in an upcoming release."
+              />
+            )}
           </>
         )}
       </main>
@@ -1991,6 +1630,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       )}
 
+      {/* ACADEMY LOADING SCREEN MODAL */}
+      {isLoadingAcademy && (
+        <LoadingModal type="academy" />
+      )}
+
       {/* LOGOUT LOADING SCREEN MODAL */}
       {isSigningOut && (
         <LoadingModal type="logout" />
@@ -2000,3 +1644,4 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 };
 
 export default DashboardView;
+

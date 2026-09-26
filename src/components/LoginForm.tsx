@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, KeyRound, AlertCircle, Info, ChevronDown, ChevronUp, Settings } from 'lucide-react';
-import { signInUser, signInWithSSO } from '../services/auth';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, KeyRound, AlertCircle, Info, ChevronDown, ChevronUp, Settings, Clock, X } from 'lucide-react';
+import { signInUser, signInWithSSO, getSessionExpiredFlag, setSessionExpiredFlag } from '../services/auth';
 import type { UserRole, UserSessionData } from '../services/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { LoadingModal } from './LoadingModal';
@@ -8,7 +8,10 @@ import { LoadingModal } from './LoadingModal';
 interface LoginFormProps {
   onLoginSuccess: (userData: UserSessionData) => void;
   onNavigateSignup?: () => void;
+  sessionExpiredNotice?: string | null;
+  onClearExpiredNotice?: () => void;
 }
+
 
 const KorunaLogo: React.FC = () => {
   return (
@@ -28,14 +31,33 @@ const KorunaLogo: React.FC = () => {
   );
 };
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigateSignup }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({
+  onLoginSuccess,
+  onNavigateSignup,
+  sessionExpiredNotice,
+  onClearExpiredNotice
+}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [expiredNotice, setExpiredNotice] = useState<string | null>(null);
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const flagNotice = sessionExpiredNotice || getSessionExpiredFlag();
+    if (flagNotice) {
+      setExpiredNotice(flagNotice);
+    }
+  }, [sessionExpiredNotice]);
+
+  const handleDismissExpiredNotice = () => {
+    setExpiredNotice(null);
+    setSessionExpiredFlag(false);
+    onClearExpiredNotice?.();
+  };
 
   const DEMO_ROLES: Record<string, { name: string; role: UserRole }> = {
     'alex.rivera@koruna.com': { name: 'Alex Rivera', role: 'employee' },
@@ -47,6 +69,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    handleDismissExpiredNotice();
 
     if (!email.trim() || !email.includes('@')) {
       setErrorMsg('Please enter a valid Koruna email address.');
@@ -84,6 +107,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
   const handleSSO = async (provider: 'google' | 'azure') => {
     setIsLoading(true);
     setErrorMsg(null);
+    handleDismissExpiredNotice();
     const startTime = Date.now();
     const result = await signInWithSSO(provider, {
       email: email.trim() || undefined
@@ -112,6 +136,48 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onNavigate
       <span className="koruna-login-badge">EMPLOYEE SIGN-IN</span>
       <h2 className="koruna-login-title">Welcome back</h2>
       <p className="koruna-login-subtitle">Log in to continue your learning journey.</p>
+
+      {expiredNotice && (
+        <div style={{
+          padding: '0.75rem 0.9rem',
+          background: '#fffbe6',
+          border: '1px solid #ffe58f',
+          color: '#873800',
+          fontSize: '0.85rem',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: '0.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(250, 173, 20, 0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+            <Clock size={18} style={{ flexShrink: 0, marginTop: '2px', color: '#d48806' }} />
+            <div>
+              <strong style={{ display: 'block', marginBottom: '0.15rem' }}>Session Expired</strong>
+              <span>{expiredNotice}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleDismissExpiredNotice}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#873800',
+              padding: '0.1rem',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            title="Dismiss notice"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
 
       {errorMsg && (
         <div style={{ padding: '0.65rem 0.85rem', background: '#fce8e6', border: '1px solid #ea4335', color: '#c5221f', fontSize: '0.85rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', borderRadius: '6px' }}>
