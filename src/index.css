@@ -1774,6 +1774,17 @@ body {
   gap: 1.5rem;
 }
 
+@keyframes korunaCardRealtimeEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .koruna-assigned-course-card {
   background-color: #ffffff;
   border: 1px solid var(--koruna-border-color);
@@ -1784,6 +1795,7 @@ body {
   gap: 1rem;
   box-shadow: var(--koruna-card-shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  animation: korunaCardRealtimeEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .koruna-assigned-course-card:hover {

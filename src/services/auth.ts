@@ -193,6 +193,7 @@ export async function signInUser(
     return {
       success: true,
       data: {
+        id: emailLower,
         name: preset ? preset.name : (email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') || 'Jessica Taylor'),
         role,
         email,

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { PlayCircle, ChevronLeft, ChevronRight, FileText, Eye, Download, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { PlayCircle, ChevronLeft, ChevronRight, FileText, Eye, Download, ExternalLink, CheckCircle } from 'lucide-react';
 import type { Course, UserProgress } from '../../../services/db';
 import { ResourceViewerModal, type ResourceFile } from './ResourceViewerModal';
 import { parseVideoUrl } from '../../../lib/videoUtils';
 import { KorunaLogoSvg } from '../../KorunaLogo';
+import { LoadingModal } from '../../LoadingModal';
 
 interface LessonViewerProps {
   studyingCourse: Course;
@@ -11,6 +12,9 @@ interface LessonViewerProps {
   setActiveLessonIdx: React.Dispatch<React.SetStateAction<number>>;
   userProgress: UserProgress[];
   handleMarkLessonComplete: (lessonId: string) => Promise<void>;
+  handleMarkCourseComplete?: (courseId?: string) => Promise<void>;
+  setStudyingCourse?: (course: Course | null) => void;
+  onDone?: () => void;
 }
 
 export const LessonViewer: React.FC<LessonViewerProps> = ({
@@ -18,18 +22,145 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
   activeLessonIdx,
   setActiveLessonIdx,
   userProgress,
-  handleMarkLessonComplete
+  handleMarkLessonComplete,
+  handleMarkCourseComplete,
+  setStudyingCourse,
+  onDone
 }) => {
   const [selectedResource, setSelectedResource] = useState<ResourceFile | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState<boolean>(true);
+  const [isSubmittingDone, setIsSubmittingDone] = useState<boolean>(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
   const lesson = studyingCourse.lessons[activeLessonIdx];
   const currentProgress = userProgress.find(p => p.courseId === studyingCourse.id);
-  const isCompleted = currentProgress?.completedLessons.includes(lesson.id);
+  const isCompleted = currentProgress?.completedLessons.includes(lesson.id) ?? false;
 
-  // Reset video loading state on lesson change
+  const [watchedProgress, setWatchedProgress] = useState<number>(() => isCompleted ? 100 : 0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+
+  // Parse estimated total duration in seconds from lesson.duration string (e.g. "10m" -> 600s)
+  const totalSeconds = React.useMemo(() => {
+    if (!lesson?.duration) return 300;
+    const match = lesson.duration.match(/(\d+)/);
+    if (match) {
+      const val = parseInt(match[1], 10);
+      return val > 0 ? val * 60 : 300;
+    }
+    return 300;
+  }, [lesson?.duration]);
+
+  // Sync state when lesson changes or completion status changes
   useEffect(() => {
     setIsVideoLoading(true);
-  }, [lesson?.id, lesson?.videoUrl]);
+    setIsPlaying(false);
+    if (isCompleted) {
+      setWatchedProgress(100);
+    } else {
+      setWatchedProgress(0);
+    }
+  }, [lesson?.id, isCompleted]);
+
+  // Listen for YouTube iframe postMessage events
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        let data = event.data;
+        if (typeof data === 'string') {
+          data = JSON.parse(data);
+        }
+        if (data && typeof data === 'object') {
+          if (data.event === 'infoDelivery' && data.info) {
+            const { currentTime, duration, playerState } = data.info;
+            if (typeof currentTime === 'number' && typeof duration === 'number' && duration > 0) {
+              const pct = Math.min(100, Math.max(0, Math.round((currentTime / duration) * 100)));
+              setWatchedProgress(prev => Math.max(prev, pct));
+              if (pct >= 95 && !isCompleted) {
+                handleMarkLessonComplete(lesson.id);
+              }
+            }
+            if (playerState === 1) setIsPlaying(true);
+            else if (playerState === 2 || playerState === 0) setIsPlaying(false);
+            if (playerState === 0) {
+              setWatchedProgress(100);
+              handleMarkLessonComplete(lesson.id);
+            }
+          } else if (data.event === 'onStateChange') {
+            if (data.info === 1) setIsPlaying(true);
+            if (data.info === 2) setIsPlaying(false);
+            if (data.info === 0) {
+              setIsPlaying(false);
+              setWatchedProgress(100);
+              handleMarkLessonComplete(lesson.id);
+            }
+          }
+        }
+      } catch {}
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [lesson?.id, isCompleted, handleMarkLessonComplete]);
+
+  const pinkThemeColor = '#a82c5d';
+  const parsedVideo = parseVideoUrl(lesson.videoUrl);
+
+  // Playback timer for iframe streams (Google Drive / external embeds)
+  useEffect(() => {
+    if (!parsedVideo || parsedVideo.type === 'direct') return;
+    if (isCompleted || !isPlaying) return;
+
+    const interval = setInterval(() => {
+      setWatchedProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          if (!isCompleted) handleMarkLessonComplete(lesson.id);
+          return 100;
+        }
+        const step = (1 / totalSeconds) * 100;
+        const next = Math.min(100, prev + step);
+        if (next >= 95 && !isCompleted) {
+          handleMarkLessonComplete(lesson.id);
+        }
+        return parseFloat(next.toFixed(1));
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [parsedVideo, isPlaying, isCompleted, totalSeconds, lesson?.id, handleMarkLessonComplete]);
+
+  // Interactive seeking / setting progress when clicking the progress bar
+  const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.min(100, Math.max(0, Math.round((clickX / rect.width) * 100)));
+    setWatchedProgress(percentage);
+
+    // If HTML5 direct video is loaded
+    if (videoRef.current && videoRef.current.duration) {
+      videoRef.current.currentTime = (percentage / 100) * videoRef.current.duration;
+    }
+
+    // If YouTube iframe is loaded
+    if (iframeRef.current && parsedVideo?.type === 'youtube' && iframeRef.current.contentWindow) {
+      const targetSeconds = (percentage / 100) * (totalSeconds || 300);
+      try {
+        iframeRef.current.contentWindow.postMessage(
+          JSON.stringify({
+            event: 'command',
+            func: 'seekTo',
+            args: [targetSeconds, true]
+          }),
+          '*'
+        );
+      } catch {}
+    }
+
+    if (percentage >= 95 && !isCompleted) {
+      handleMarkLessonComplete(lesson.id);
+    }
+  };
 
   // Group lessons into modules to find which module the current lesson belongs to
   const currentModule = React.useMemo(() => {
@@ -52,12 +183,38 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
     };
   }, [studyingCourse.lessons, lesson]);
 
+  const hasQuiz = Boolean(studyingCourse.quiz && studyingCourse.quiz.length > 0);
+  const isLastLesson = activeLessonIdx === studyingCourse.lessons.length - 1;
+
   const handleNextClick = async () => {
-    // Automatically mark the current lesson complete when advancing
-    if (!isCompleted) {
-      await handleMarkLessonComplete(lesson.id);
+    if (isSubmittingDone) return;
+
+    if (isLastLesson && !hasQuiz) {
+      setIsSubmittingDone(true);
+      try {
+        if (!isCompleted) {
+          await handleMarkLessonComplete(lesson.id);
+        }
+        if (handleMarkCourseComplete) {
+          await handleMarkCourseComplete(studyingCourse.id);
+        }
+        await new Promise(resolve => setTimeout(resolve, 600));
+        if (onDone) {
+          onDone();
+        } else if (setStudyingCourse) {
+          setStudyingCourse(null);
+        }
+      } catch (err) {
+        console.error('Error finishing course:', err);
+      } finally {
+        setIsSubmittingDone(false);
+      }
+    } else {
+      if (!isCompleted) {
+        await handleMarkLessonComplete(lesson.id);
+      }
+      setActiveLessonIdx(prev => prev + 1);
     }
-    setActiveLessonIdx(prev => prev + 1);
   };
 
   const handlePreviousClick = () => {
@@ -65,9 +222,6 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
       setActiveLessonIdx(prev => prev - 1);
     }
   };
-
-  const pinkThemeColor = '#a82c5d';
-  const parsedVideo = parseVideoUrl(lesson.videoUrl);
 
   return (
     <div style={{
@@ -77,6 +231,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
       gap: '1.75rem',
       width: '100%'
     }}>
+      {/* Loading Modal Overlay when clicking Done */}
+      {isSubmittingDone && (
+        <LoadingModal message="Finalizing course & saving progress..." />
+      )}
       {/* Video Viewport Section */}
       {parsedVideo && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -120,13 +278,17 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
 
             {parsedVideo.embedUrl ? (
               <iframe
+                ref={iframeRef}
                 src={parsedVideo.embedUrl}
                 title={lesson.title}
                 frameBorder="0"
                 loading="lazy"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
-                onLoad={() => setIsVideoLoading(false)}
+                onLoad={() => {
+                  setIsVideoLoading(false);
+                  setIsPlaying(true);
+                }}
                 style={{
                   width: '100%',
                   height: '420px',
@@ -135,6 +297,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
               />
             ) : (
               <video
+                ref={videoRef}
                 style={{
                   width: '100%',
                   display: 'block',
@@ -145,7 +308,23 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
                 src={parsedVideo.directUrl}
                 onLoadedData={() => setIsVideoLoading(false)}
                 onCanPlay={() => setIsVideoLoading(false)}
-                onEnded={() => handleMarkLessonComplete(lesson.id)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={(e) => {
+                  const v = e.currentTarget;
+                  if (v.duration && !isNaN(v.duration) && v.duration > 0) {
+                    const pct = Math.min(100, Math.max(0, Math.round((v.currentTime / v.duration) * 100)));
+                    setWatchedProgress(pct);
+                    if (pct >= 95 && !isCompleted) {
+                      handleMarkLessonComplete(lesson.id);
+                    }
+                  }
+                }}
+                onEnded={() => {
+                  setWatchedProgress(100);
+                  setIsPlaying(false);
+                  handleMarkLessonComplete(lesson.id);
+                }}
               />
             )}
           </div>
@@ -218,15 +397,55 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
           {lesson.title}
         </h2>
 
-        {/* Watched Progress bar (Mock 30% watched for visual styling) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
-          <div style={{ display: 'flex', height: '6px', background: '#f1f5f9', borderRadius: '9999px', flex: 1, overflow: 'hidden' }}>
-            <div style={{ width: '30%', background: pinkThemeColor, borderRadius: '9999px' }} />
+        {/* Dynamic Watched Progress Bar (Only displayed if video exists) */}
+        {Boolean(parsedVideo) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+              <span style={{ color: 'var(--udemy-text-muted)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: isCompleted ? '#10b981' : isPlaying ? '#ec4899' : '#94a3b8',
+                  display: 'inline-block',
+                  boxShadow: isPlaying ? '0 0 8px rgba(236, 72, 153, 0.7)' : 'none',
+                  transition: 'all 0.3s ease'
+                }} />
+                {isCompleted ? 'Completed' : isPlaying ? 'Streaming / Watching...' : 'Paused / Ready'}
+              </span>
+              <span style={{ color: 'var(--udemy-text)', fontWeight: 700, fontSize: '0.85rem' }}>
+                {Math.round(watchedProgress)}% watched
+              </span>
+            </div>
+
+            <div
+              onClick={handleProgressBarClick}
+              title="Click anywhere on the progress bar to set watched progress"
+              style={{
+                display: 'flex',
+                height: '8px',
+                background: '#f1f5f9',
+                borderRadius: '9999px',
+                width: '100%',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                position: 'relative',
+                border: '1px solid rgba(0,0,0,0.06)',
+                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.04)'
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.min(100, Math.max(0, watchedProgress))}%`,
+                  background: isCompleted ? '#10b981' : `linear-gradient(90deg, ${pinkThemeColor} 0%, #d946ef 100%)`,
+                  borderRadius: '9999px',
+                  transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  height: '100%'
+                }}
+              />
+            </div>
           </div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--udemy-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-            30% watched
-          </span>
-        </div>
+        )}
       </div>
 
       {/* Lesson Overview */}
@@ -455,6 +674,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
 
         <button
           className="btn-koruna-solid"
+          disabled={isSubmittingDone}
           onClick={handleNextClick}
           style={{
             display: 'inline-flex',
@@ -466,11 +686,30 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
             borderRadius: '8px',
             fontSize: '0.9rem',
             fontWeight: 600,
-            cursor: 'pointer'
+            cursor: isSubmittingDone ? 'wait' : 'pointer',
+            opacity: isSubmittingDone ? 0.7 : 1,
+            background: (isLastLesson && !hasQuiz) ? '#10b981' : undefined,
+            borderColor: (isLastLesson && !hasQuiz) ? '#10b981' : undefined
           }}
         >
-          {activeLessonIdx === studyingCourse.lessons.length - 1 ? 'Take Quiz' : 'Next'}
-          <ChevronRight size={16} />
+          {isLastLesson ? (
+            hasQuiz ? (
+              <>
+                Take Quiz
+                <ChevronRight size={16} />
+              </>
+            ) : (
+              <>
+                Done
+                <CheckCircle size={16} />
+              </>
+            )
+          ) : (
+            <>
+              Next
+              <ChevronRight size={16} />
+            </>
+          )}
         </button>
       </div>
 

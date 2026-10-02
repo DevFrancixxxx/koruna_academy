@@ -8,7 +8,9 @@ import {
   Sparkles,
   Layers,
   ShieldCheck,
-  FileText
+  FileText,
+  ClipboardCheck,
+  UserCheck
 } from 'lucide-react';
 import type { Course } from '../../services/db';
 
@@ -83,7 +85,9 @@ export const getCourseBannerStyle = (course?: Partial<Course> | null) => {
 export const getCategoryIcon = (category?: string, contentType?: string) => {
   if (contentType === 'document') return FileText;
   const cat = (category || '').toLowerCase();
+  if (cat.includes('onboarding') || cat.includes('orient')) return UserCheck;
   if (cat.includes('mortgage')) return Home;
+  if (cat.includes('loan processing') || cat.includes('loan')) return ClipboardCheck;
   if (cat.includes('lending')) return Landmark;
   if (cat.includes('ai') || cat.includes('tech') || cat.includes('digital')) return Sparkles;
   if (cat.includes('operation') || cat.includes('process')) return Layers;
@@ -434,7 +438,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     const cat = course.category.toLowerCase();
     let catBg = '#f4f4f5';
     let catColor = '#71717a';
-    if (cat.includes('lending')) {
+    if (cat.includes('onboarding')) {
+      catBg = '#eff6ff';
+      catColor = '#1d4ed8';
+    } else if (cat.includes('lending')) {
       catBg = '#e8f5e9';
       catColor = '#15803d';
     } else if (cat.includes('mortgage')) {

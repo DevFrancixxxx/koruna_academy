@@ -121,18 +121,22 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
   completed_lessons JSONB DEFAULT '[]'::jsonb,
   quiz_score INTEGER,
   quiz_attempts INTEGER DEFAULT 0,
+  learning_hours NUMERIC DEFAULT 0,
   practical_status TEXT DEFAULT 'none' CHECK (practical_status IN ('none', 'pending', 'approved', 'rejected')),
   practical_notes TEXT,
   overdue BOOLEAN DEFAULT false,
   due_date TEXT,
   assigned_by TEXT,
+  last_viewed_at TEXT,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   PRIMARY KEY (user_email, course_id, application_id)
 );
 
--- Ensure application_id and assigned_by columns exist for existing instances
+-- Ensure application_id, assigned_by, last_viewed_at, and learning_hours columns exist for existing instances
 ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS application_id INTEGER DEFAULT 0;
 ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS assigned_by TEXT;
+ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS last_viewed_at TEXT;
+ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS learning_hours NUMERIC DEFAULT 0;
 
 -- Enable RLS for user progress
 ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;

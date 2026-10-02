@@ -1,9 +1,11 @@
 import React from 'react';
 import { BookOpen, Zap } from 'lucide-react';
 import type { Course } from '../services/db';
+import type { UserSessionData } from '../services/auth';
 import { CourseCard } from './courses/CourseCard';
 
 interface TrainerDashboardProps {
+  userSession?: UserSessionData;
   courses: Course[];
   handleStartStudy: (course: Course) => void;
   handleStartEditCourse: (course: Course) => void;
@@ -18,6 +20,7 @@ interface TrainerDashboardProps {
 }
 
 export const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
+  userSession,
   courses,
   handleStartStudy,
   handleStartEditCourse,
@@ -44,7 +47,7 @@ export const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           style={{ height: '40px', padding: '0 1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
           onClick={() => {
             setEditingCourseId(null);
-            setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe', imageUrl: '' });
+            setCourseForm({ title: '', category: 'Mortgage', code: '', level: 'Beginner', description: '', imgBg: '#e0f2fe', imageUrl: '', trainer: userSession?.name || '' });
             setCourseLessons([{ title: 'Lesson 1: Introduction', content: 'Enter lesson text here.', moduleId: 'm1', moduleTitle: 'Introduction' }]);
             setCourseQuiz([]);
             setCourseModules([{ id: 'm1', title: 'Introduction' }]);

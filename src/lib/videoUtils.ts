@@ -23,9 +23,10 @@ export function parseVideoUrl(url?: string | null): ParsedVideo | null {
   const ytMatch = cleanUrl.match(ytRegExp);
   if (ytMatch && ytMatch[2] && ytMatch[2].length === 11) {
     const videoId = ytMatch[2];
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
     return {
       type: 'youtube',
-      embedUrl: `https://www.youtube.com/embed/${videoId}`,
+      embedUrl: `https://www.youtube.com/embed/${videoId}?enablejsapi=1${origin ? `&origin=${encodeURIComponent(origin)}` : ''}`,
       openUrl: `https://www.youtube.com/watch?v=${videoId}`
     };
   }

@@ -5,12 +5,9 @@ import {
   X,
   LayoutDashboard,
   Award,
-  Users,
-  Settings,
   Home,
   GraduationCap,
   BookOpen,
-  FileText,
   Megaphone,
   Trophy,
   Target,
@@ -20,13 +17,11 @@ import {
   Route,
   PieChart,
   Sliders,
-  TrendingUp,
-  PlusCircle,
-  UserCheck,
-  Shield
+  TrendingUp
 } from 'lucide-react';
 import type { UserSessionData } from '../services/auth';
 import type { Course } from '../services/db';
+import { AdminSidebar } from './admin/AdminSidebar';
 
 export interface SidebarProps {
   isMobileSidebarOpen: boolean;
@@ -171,124 +166,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <nav className="koruna-sidebar-menu">
           {userSession.role === 'admin' || userSession.role === 'trainer' || activeTab === 'admin_suite' ? (
-            <>
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'overview' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('overview');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <LayoutDashboard size={18} className="koruna-sidebar-item-icon" />
-                <span>Admin Dashboard</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'users' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('users');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <Users size={18} className="koruna-sidebar-item-icon" />
-                <span>User Directory</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'creator' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('creator');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <PlusCircle size={18} className="koruna-sidebar-item-icon" />
-                <span>Course Creator</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'inventory' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('inventory');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <BookOpen size={18} className="koruna-sidebar-item-icon" />
-                <span>Course Inventory</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'document_inventory' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('document_inventory');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <FileText size={18} className="koruna-sidebar-item-icon" />
-                <span>Document Inventory</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'certificate_templates' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('certificate_templates');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <Award size={18} className="koruna-sidebar-item-icon" />
-                <span>Certificate Templates</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'assignments' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('assignments');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <UserCheck size={18} className="koruna-sidebar-item-icon" />
-                <span>Assignments</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'permissions' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('permissions');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <Shield size={18} className="koruna-sidebar-item-icon" />
-                <span>Permissions Matrix</span>
-              </button>
-
-              <button
-                className={`koruna-sidebar-item ${activeTab === 'admin_suite' && activeInnerTab === 'settings' && !studyingCourse ? 'active' : ''}`}
-                onClick={() => {
-                  setStudyingCourse(null);
-                  onTabChange('admin_suite');
-                  setActiveInnerTab?.('settings');
-                  setIsMobileSidebarOpen(false);
-                }}
-              >
-                <Settings size={18} className="koruna-sidebar-item-icon" />
-                <span>Platform Settings</span>
-              </button>
-            </>
+            <AdminSidebar
+              activeTab={activeTab}
+              activeInnerTab={activeInnerTab}
+              studyingCourse={studyingCourse}
+              setStudyingCourse={setStudyingCourse}
+              onTabChange={onTabChange}
+              setActiveInnerTab={setActiveInnerTab}
+              setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+            />
           ) : isAcademyMode ? (
             <>
               {/* BUTTON TO RETURN TO KORUNA LIFE HOMEPAGE */}

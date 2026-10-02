@@ -64,15 +64,15 @@ export const KorunaAcademyDashboard: React.FC<KorunaAcademyDashboardProps> = ({
   const userAssignedCourses = courses.filter((c) => {
     const prog = userProgress.find(
       (p) => p.courseId === c.id && (
-        (userSession.email && p.userEmail.toLowerCase() === currentUserEmail) ||
-        !p.userEmail
+        !p.userEmail || (currentUserEmail && p.userEmail.toLowerCase().trim() === currentUserEmail)
       )
     );
     const hasAssignedProgress = !!(prog && (prog.dueDate || prog.assignedBy));
     const hasAssignedCourseFlag = !!c.isAssigned || (
       !!c.assignedUsers && c.assignedUsers.some((a) =>
-        (userSession.id && String(a.userId) === String(userSession.id)) ||
-        (userSession.email && a.userId.toLowerCase() === currentUserEmail)
+        (userSession.id && String(a.userId).toLowerCase().trim() === String(userSession.id).toLowerCase().trim()) ||
+        (userSession.email && String(a.userId).toLowerCase().trim() === currentUserEmail) ||
+        (currentUserEmail && currentUserEmail.includes(String(a.userId).toLowerCase().trim()))
       )
     );
     return hasAssignedProgress || hasAssignedCourseFlag;
@@ -423,16 +423,16 @@ export const KorunaAcademyDashboard: React.FC<KorunaAcademyDashboardProps> = ({
           const assignedCourses = courses.filter((c) => {
             const prog = userProgress.find(
               (p) => p.courseId === c.id && (
-                (userSession.email && p.userEmail.toLowerCase() === userSession.email.toLowerCase()) ||
-                !p.userEmail
+                !p.userEmail || (currentUserEmail && p.userEmail.toLowerCase().trim() === currentUserEmail)
               )
-            ) || userProgress.find((p) => p.courseId === c.id);
+            );
 
             const hasAssignedProgress = !!(prog && (prog.dueDate || prog.assignedBy));
             const hasAssignedCourseFlag = !!c.isAssigned || (
               !!c.assignedUsers && c.assignedUsers.some((a) =>
-                (userSession.id && String(a.userId) === String(userSession.id)) ||
-                (userSession.email && a.userId.toLowerCase() === userSession.email.toLowerCase())
+                (userSession.id && String(a.userId).toLowerCase().trim() === String(userSession.id).toLowerCase().trim()) ||
+                (userSession.email && String(a.userId).toLowerCase().trim() === currentUserEmail) ||
+                (currentUserEmail && currentUserEmail.includes(String(a.userId).toLowerCase().trim()))
               )
             );
 
@@ -463,7 +463,7 @@ export const KorunaAcademyDashboard: React.FC<KorunaAcademyDashboardProps> = ({
           return (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
               {assignedCourses.map((course) => {
-                const prog = userProgress.find((p) => p.courseId === course.id);
+                const prog = userProgress.find((p) => p.courseId === course.id && (!p.userEmail || p.userEmail.toLowerCase().trim() === currentUserEmail));
                 const percent = prog ? prog.progressPercent : 0;
                 const isStarted = percent > 0;
 

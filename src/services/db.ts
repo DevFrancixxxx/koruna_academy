@@ -14,8 +14,10 @@ export interface Lesson {
 export interface QuizQuestion {
   question: string;
   options: string[];
-  correctAnswer: number; // Index of correct option (0-3)
+  correctAnswer: number; // Index of correct option (0-3 for MCQ, 0-1 for T/F)
   moduleTitle?: string;
+  type?: 'multiple_choice' | 'true_false' | 'short_answer';
+  answerText?: string;
 }
 
 export interface CourseAssignment {
@@ -172,465 +174,8 @@ export interface DatabaseUser {
 // SEED DATA PRESETS
 // ==========================================
 
-const DEFAULT_COURSES: Course[] = [
-  {
-    id: 'c1',
-    title: 'Mortgage Level 2: Underwriting Fundamentals',
-    category: 'Mortgage',
-    rating: 4.8,
-    code: 'MORT-202',
-    level: 'Intermediate',
-    description: 'Build a practical foundation in mortgage underwriting — covering income verification, credit risk assessment, debt-to-income calculations, and compliance checkpoints used in day-to-day loan processing at Koruna. Includes real case files and a final assessment.',
-    imgBg: '#fbeef4',
-    trainer: 'Dr. Marcus Vance',
-    requirements: [
-      'Complete "Mortgage Basics" course',
-      'Lending Cluster employees only',
-      'Score 80%+ on final assessment'
-    ],
-    attachments: [
-      { name: 'DTI Ratio Worksheet.pdf', url: '#', size: 126976 },
-      { name: 'Sample Case File.pdf', url: '#', size: 353280 },
-      { name: 'Ratio Calculator Sheet.xlsx', url: '#', size: 91136 }
-    ],
-    lessons: [
-      {
-        id: 'c1-l1',
-        title: '1.1 Welcome & Overview',
-        content: `Welcome to Mortgage Level 2: Underwriting Fundamentals. In this module, we will cover:
-1. The role of the Mortgage Underwriter in risk management.
-2. The core workflow from loan origination to closing.
-3. How Koruna Academy helps you stay compliant with internal and federal guidelines.
-Ensure you download the resources below to follow along with the exercises.`,
-        videoUrl: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view',
-        moduleId: 'm1',
-        moduleTitle: 'Introduction to Underwriting',
-        duration: '6m'
-      },
-      {
-        id: 'c1-l2',
-        title: '1.2 Key Underwriting Terms',
-        content: `Understanding key terminology is essential for effective underwriting:
-- PITI: Principal, Interest, Taxes, and Insurance.
-- LTV: Loan-to-Value ratio (Loan amount divided by appraised value or purchase price).
-- DTI: Debt-to-Income ratio (Housing expenses and recurring debts divided by gross income).
-- FICO: Fair Isaac Corporation credit score, measuring creditworthiness.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm1',
-        moduleTitle: 'Introduction to Underwriting',
-        duration: '9m'
-      },
-      {
-        id: 'c1-l3',
-        title: '1.3 Underwriting Workflow',
-        content: `An underwriter reviews the 4 C's of credit:
-1. Character: Credit history and scores.
-2. Capacity: Income stability and debt ratios.
-3. Collateral: Property appraisal and title.
-4. Capital: Liquid assets and cash reserves.
-The standard workflow goes from initial file review, issuing conditions, verifying documents, to the final sign-off.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm1',
-        moduleTitle: 'Introduction to Underwriting',
-        duration: '25m'
-      },
-      {
-        id: 'c1-l4',
-        title: '2.1 Salaried Borrowers & W-2s',
-        content: `Verifying salaried income involves reviewing recent paystubs and W-2 forms:
-- Ensure paystubs cover 30 consecutive days.
-- Cross-reference Year-to-Date (YTD) earnings with prior years' W-2s.
-- Inspect for any non-standard deductions or garnishments that affect net income.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm2',
-        moduleTitle: 'Income & Employment Verification',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l5',
-        title: '2.2 Self-Employed Audits (Schedule C)',
-        content: `Self-employed sole proprietors require Schedule C audits:
-- Calculate net income using Schedule C Net Profit (Line 31).
-- Add back non-cash expenses like Depreciation (Line 13) and Amortization.
-- Subtract non-recurring capital gains or add back business use of home.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm2',
-        moduleTitle: 'Income & Employment Verification',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l6',
-        title: '2.3 Tax Returns Analysis (Form 1040)',
-        content: `Analyzing personal tax returns (Form 1040) is crucial for complex income:
-- Look for capital gains/losses on Schedule D.
-- Audit rental income or loss on Schedule E.
-- Account for unreimbursed employee business expenses (IRS Form 2106).`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm2',
-        moduleTitle: 'Income & Employment Verification',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l7',
-        title: '2.4 Income Verification Checklist',
-        content: `Use this systematic checklist when signing off on income:
-1. Verbally verify employment (VOE) within 10 days of closing.
-2. Confirm 4506-C tax transcripts match filed returns.
-3. document explanation for any gaps in employment greater than 30 days.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm2',
-        moduleTitle: 'Income & Employment Verification',
-        duration: '10m'
-      },
-      {
-        id: 'c1-l8',
-        title: '3.1 Understanding DTI Ratios',
-        content: `Debt-to-Income (DTI) ratio is a primary underwriting metric:
-- Front-end DTI focuses entirely on housing cost (PITI) relative to gross income.
-- Back-end DTI adds all other monthly revolving and installment debts.
-- Standard conventional guidelines recommend ratios within 28/36, but automated underwriting systems (AUS) can approve higher ratios based on compensating factors.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm3',
-        moduleTitle: 'Debt-to-Income Calculations',
-        duration: '10m'
-      },
-      {
-        id: 'c1-l9',
-        title: '3.2 Front-End vs Back-End Ratios',
-        content: `This lesson breaks down the difference between front-end and back-end DTI ratios, how each is calculated, and why underwriters weigh them differently when reviewing a loan application. By the end, you'll be able to calculate both ratios from a borrower's income and debt figures and flag applications that fall outside acceptable thresholds.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm3',
-        moduleTitle: 'Debt-to-Income Calculations',
-        duration: '12m'
-      },
-      {
-        id: 'c1-l10',
-        title: '3.3 Case Study: Borderline Applications',
-        content: `Reviewing borderline applications requires evaluating compensating factors:
-- High FICO scores (>740).
-- Substantial cash reserves (greater than 6 months of PITI).
-- Minimal increase in housing expense (the borrower's new mortgage payment is close to their current rent).`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm3',
-        moduleTitle: 'Debt-to-Income Calculations',
-        duration: '18m'
-      },
-      {
-        id: 'c1-l11',
-        title: '3.4 Module Quiz',
-        content: `Test your understanding of DTI calculation rules and compensating factors. Review the case scenarios presented and answer the questions before moving to the compliance checkpoints.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm3',
-        moduleTitle: 'Debt-to-Income Calculations',
-        duration: '10m'
-      },
-      {
-        id: 'c1-l12',
-        title: '4.1 Regulatory Overview',
-        content: `Mortgage underwriting is highly regulated to ensure fair lending:
-- TILA: Truth in Lending Act (Regulation Z) mandates clear disclosure of APR and financing costs.
-- RESPA: Real Estate Settlement Procedures Act (Regulation X) governs closing costs and escrow accounts.
-- TRID: Integrates LE and CD disclosures with strict timing guidelines.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm4',
-        moduleTitle: 'Compliance Checkpoints',
-        duration: '14m'
-      },
-      {
-        id: 'c1-l13',
-        title: '4.2 Common Compliance Errors',
-        content: `Audit compliance errors to avoid costly lender penalties:
-- Failure to issue a revised Loan Estimate within 3 business days of a changed circumstance.
-- Incorrect calculation of prepaid finance charges.
-- Violation of the 3-day waiting period between Closing Disclosure delivery and loan consummation.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm4',
-        moduleTitle: 'Compliance Checkpoints',
-        duration: '11m'
-      },
-      {
-        id: 'c1-l14',
-        title: '4.3 Fair Lending Guidelines',
-        content: `ECOA (Equal Credit Opportunity Act) prohibits discrimination in credit transactions. Underwriters must evaluate files solely based on creditworthiness, income, and collateral, ensuring no disparate treatment occurs based on protected classes.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm4',
-        moduleTitle: 'Compliance Checkpoints',
-        duration: '10m'
-      },
-      {
-        id: 'c1-l15',
-        title: '5.1 Appraisal Standards & Form 1004',
-        content: `Collateral review ensures the property provides adequate security for the loan:
-- Uniform Residential Appraisal Report (URAR Form 1004).
-- Inspect appraisal photos, comps selection, and neighborhood characteristics.
-- Audit net and gross adjustment percentages for comps.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm5',
-        moduleTitle: 'Collateral & Appraisal Underwriting',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l16',
-        title: '5.2 Property Valuation Analysis',
-        content: `Understand property condition ratings (C1-C6) and quality ratings (Q1-Q6):
-- Conventional loans generally require properties to be rated C4 or better.
-- Properties with a C5 or C6 rating require repairs prior to loan closing.
-- Verify structural issues, water damage, or environmental hazards.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm5',
-        moduleTitle: 'Collateral & Appraisal Underwriting',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l17',
-        title: '5.3 Title Commitments & Insurance',
-        content: `Ensure a clean title transfer:
-- Check for existing liens, judgments, or tax assessments.
-- Review easements and encroachments that impact property value.
-- Verify lender's title insurance policy matches loan amount and property legal description.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm5',
-        moduleTitle: 'Collateral & Appraisal Underwriting',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l18',
-        title: '6.1 Red Flags in Loan Applications',
-        content: `Detecting mortgage fraud is a critical underwriting responsibility:
-- Inconsistent handwriting or digital signatures on tax documents.
-- Paystubs with round numbers or incorrect tax withholding percentages.
-- Undisclosed debts found during the final credit refresh.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm6',
-        moduleTitle: 'Fraud Detection & Quality Control',
-        duration: '20m'
-      },
-      {
-        id: 'c1-l19',
-        title: '6.2 Asset Verification & Gift Letters',
-        content: `Verify source of funds:
-- Large deposits on bank statements must be fully sourced and documented.
-- Gift funds require a signed Gift Letter and proof of transfer from donor to borrower.
-- Cash on hand is generally unacceptable for conventional mortgages.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm6',
-        moduleTitle: 'Fraud Detection & Quality Control',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l20',
-        title: '6.3 Quality Control & Auditing',
-        content: `Audit files post-approval to ensure quality control (QC):
-- Conduct random quality checks on verified income and credit files.
-- Double-check calculation sheets to confirm mathematical accuracy.
-- Prepare loan files for external compliance audits.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm6',
-        moduleTitle: 'Fraud Detection & Quality Control',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l21',
-        title: '7.1 Comprehensive Case Study Review',
-        content: `Walk through a full loan case file from start to finish:
-- Review the initial 1003 application form.
-- Review credit reports, Schedule C, bank statements, and appraisal.
-- Identify potential risk factors and draft standard conditional approval clauses.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm7',
-        moduleTitle: 'Final Review & Assessment',
-        duration: '20m'
-      },
-      {
-        id: 'c1-l22',
-        title: '7.2 Underwriting Best Practices',
-        content: `Professional underwriting tips for efficiency and safety:
-- Maintain detailed, clear underwriting narrative sheets explaining decisions.
-- Build collaborative relationships with loan processors and officers while maintaining risk boundaries.
-- Keep up-to-date with agency guideline updates (Fannie Mae, Freddie Mac).`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm7',
-        moduleTitle: 'Final Review & Assessment',
-        duration: '15m'
-      },
-      {
-        id: 'c1-l23',
-        title: '7.3 Final Exam Prep',
-        content: `Prepare for the final course evaluation:
-- Review key concepts of income calculations (Schedule C, corporate returns).
-- Review compliance rules (TRID timelines, ECOA basics).
-- Go over the final study guide files included in your attachments.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm7',
-        moduleTitle: 'Final Review & Assessment',
-        duration: '25m'
-      },
-      {
-        id: 'c1-l24',
-        title: '7.4 Course Wrap-up & Graduation',
-        content: `Congratulations on completing all 24 lessons! In this wrap-up session, we discuss next steps, certificate generation, and how to apply these underwriting criteria in your daily operations at Koruna.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        moduleId: 'm7',
-        moduleTitle: 'Final Review & Assessment',
-        duration: '10m'
-      }
-    ],
-    quiz: [
-      {
-        question: 'What is the primary objective of mortgage underwriting?',
-        options: [
-          'To maximize the lender\'s promotional interest rates.',
-          'To evaluate and minimize the risk of a borrower defaulting on the loan.',
-          'To guarantee that every applicant receives an immediate loan approval.',
-          'To coordinate property appraisals and real estate marketing.'
-        ],
-        correctAnswer: 1
-      },
-      {
-        question: 'How is a borrower\'s back-end Debt-to-Income (DTI) ratio calculated?',
-        options: [
-          'Net monthly income divided by total family assets.',
-          'Monthly housing expense (PITI) plus total recurring monthly debt payments divided by gross monthly income.',
-          'Annual credit card balances divided by gross annual salary.',
-          'Total assets divided by the proposed mortgage purchase price.'
-        ],
-        correctAnswer: 1
-      },
-      {
-        question: 'Under conventional guidelines, what tax form is audited to evaluate self-employed Sole Proprietor income?',
-        options: [
-          'IRS Form 1040, Schedule C',
-          'IRS Form W-2',
-          'IRS Form 1099-DIV',
-          'IRS Form 1120-S, Schedule K-1'
-        ],
-        correctAnswer: 0
-      }
-    ]
-  },
-  {
-    id: 'c2',
-    title: 'Regulatory Compliance for Loan Officers',
-    category: 'Lending',
-    rating: 4.7,
-    code: 'REG-101',
-    level: 'Intermediate',
-    description: 'Master federal financial regulations including TILA, RESPA, TRID rules, Fair Lending, ECOA, and the Bank Secrecy Act to protect clients and ensure audits are clean.',
-    imgBg: '#dcfce7',
-    lessons: [
-      {
-        id: 'c2-l1',
-        title: 'TILA and RESPA Integrated Disclosures (TRID)',
-        content: `TRID, often called "Know Before You Owe," combines disclosure requirements under TILA and RESPA:
-1. Loan Estimate (LE): Must be delivered or mailed to the consumer within 3 business days after receiving their application. It estimates loan terms, monthly payments, and closing costs.
-2. Closing Disclosure (CD): Must be received by the consumer at least 3 business days before consummation (loan signing). If certain terms change (APR increases by >0.125%, loan product changes, or a prepayment penalty is added), a new CD must be issued, triggering a new 3-business-day waiting period.`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4'
-      },
-      {
-        id: 'c2-l2',
-        title: 'Fair Lending Laws: ECOA & HMDA',
-        content: `Fair Lending mandates equal access to credit without discrimination:
-- Equal Credit Opportunity Act (ECOA - Regulation B): Prohibits lenders from discriminating based on race, color, religion, national origin, sex, marital status, age, or receipt of public assistance.
-- Home Mortgage Disclosure Act (HMDA - Regulation C): Requires lenders to collect and report demographic data on loan applications to identify potential discriminatory lending patterns (redlining).`,
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4'
-      }
-    ],
-    quiz: [
-      {
-        question: 'Which regulation requires the Loan Estimate to be delivered within 3 business days of application?',
-        options: [
-          'HMDA rules (Regulation C)',
-          'Bank Secrecy Act rules',
-          'TRID rules (under TILA/RESPA)',
-          'FCRA rules (Regulation V)'
-        ],
-        correctAnswer: 2
-      },
-      {
-        question: 'Under the Equal Credit Opportunity Act (ECOA), which of the following is a prohibited basis for credit decisions?',
-        options: [
-          'The applicant\'s low credit score.',
-          'The applicant\'s high debt-to-income ratio.',
-          'The applicant\'s marital status or receipt of public assistance income.',
-          'The applicant\'s insufficient self-employed income history.'
-        ],
-        correctAnswer: 2
-      }
-    ]
-  },
-  {
-    id: 'c3',
-    title: 'Client Communication Essentials',
-    category: 'Operations',
-    rating: 4.6,
-    code: 'COMM-105',
-    level: 'Beginner',
-    description: 'Learn structural techniques for active listening, managing difficult client conversations during underwriting roadblocks, and establishing positive credit relations.',
-    imgBg: '#fee2e2',
-    attachments: [
-      { name: 'De-escalation Call Framework.pdf', url: '#', size: 145000 },
-      { name: 'Client Communication Cheat Sheet.pdf', url: '#', size: 210000 }
-    ],
-    lessons: [
-      {
-        id: 'c3-l1',
-        title: 'Active Listening & Empathy',
-        content: `Active listening builds trust and decreases tension in difficult financial conversations.
-1. Pay Undivided Attention: Focus on the customer's concerns, avoiding distractions.
-2. Reflective Feedback: Paraphrase the borrower's concerns (e.g., "It sounds like you're concerned about the closing timeline because your lease ends next month").
-3. Ask Clarifying Questions: Rather than guessing, ask open-ended questions about their financial files.`
-      }
-    ],
-    quiz: [
-      {
-        question: 'What is a core benefit of active listening in client service?',
-        options: [
-          'It lets you cross-sell other financial products faster.',
-          'It minimizes misunderstandings and establishes mutual trust by validating the client\'s feelings.',
-          'It helps shorten call times to meet rigid company call-center quotas.',
-          'It replaces the need for full written loan status notifications.'
-        ],
-        correctAnswer: 1
-      }
-    ]
-  },
-  {
-    id: 'c4',
-    title: 'AI Tools for Everyday Operations',
-    category: 'AI',
-    rating: 4.95,
-    code: 'AI-301',
-    level: 'Beginner',
-    description: 'A practical guide for non-technical employees to use AI copilots, draft customer emails, summarize underwriting checklists, and organize daily reports safely.',
-    imgBg: '#e0f2fe',
-    attachments: [
-      { name: 'AI Prompt Engineering Cheat Sheet.pdf', url: '#', size: 180000 },
-      { name: 'Data Security Checklist.pdf', url: '#', size: 115000 }
-    ],
-    lessons: [
-      {
-        id: 'c4-l1',
-        title: 'Leveraging AI Safely in Operations',
-        content: `Artificial intelligence tools can drastically speed up workflow efficiency, provided you follow data security practices:
-1. NEVER input Personally Identifiable Information (PII) like SSNs, borrower names, addresses, or financial tax forms into public AI engines.
-2. Always audit AI outputs. Generative models can "hallucinate" incorrect guidelines or interest rates.
-3. Use prompt engineering formulas: Role + Task + Context + Format (e.g., "Act as a mortgage advisor. Summarize the following guideline changes in 3 bullet points for a loan processor").`
-      }
-    ],
-    quiz: [
-      {
-        question: 'Which of the following data points is safe to input into a public AI tool?',
-        options: [
-          'A borrower\'s tax tax returns and Social Security Number.',
-          'A general template outline for organizing loan files (excluding client names).',
-          'The address of an underwriting property currently in escrow.',
-          'An active customer\'s bank statement transaction history.'
-        ],
-        correctAnswer: 1
-      }
-    ]
-  }
-];
+const DEFAULT_COURSES: Course[] = [];
+
 
 const DEFAULT_BADGES: Badge[] = [
   { id: 'b1', name: '12-Day Streak', description: 'Maintained a 12-day learning streak in the Koruna Portal.', icon: '🔥', color: '#ec4899' },
@@ -648,32 +193,7 @@ const DEFAULT_USERS: DatabaseUser[] = [
   { id: 'u6', name: 'Jordan Taylor', email: 'jordan.taylor@koruna.com', role: 'employee', department: 'Software Engineering', createdAt: '2026-03-01' }
 ];
 
-const DEFAULT_PROGRESS: UserProgress[] = [
-  // Alex Rivera (Employee)
-  { userEmail: 'alex.rivera@koruna.com', courseId: 'c1', progressPercent: 68, completedLessons: ['c1-l1', 'c1-l2'], quizAttempts: 0, practicalStatus: 'none', overdue: false, learningHours: 1.7 },
-  { userEmail: 'alex.rivera@koruna.com', courseId: 'c2', progressPercent: 100, completedLessons: ['c2-l1', 'c2-l2'], quizScore: 94, quizAttempts: 1, practicalStatus: 'none', overdue: false, learningHours: 2.5 },
-
-  // Jessica Taylor (Employee - on Sarah's team)
-  { userEmail: 'jessica.taylor@koruna.com', courseId: 'c1', progressPercent: 45, completedLessons: ['c1-l1'], quizAttempts: 0, practicalStatus: 'pending', overdue: false, practicalNotes: 'Underwriting fundamentals worksheet draft. Please review.', learningHours: 1.1 },
-  { userEmail: 'jessica.taylor@koruna.com', courseId: 'c2', progressPercent: 0, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: true, dueDate: '2026-07-25', learningHours: 0 },
-
-  // Jordan Taylor (Employee - Software Engineering)
-  { userEmail: 'jordan.taylor@koruna.com', courseId: 'c1', progressPercent: 12, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: false, learningHours: 0.3 },
-  { userEmail: 'jordan.taylor@koruna.com', courseId: 'c2', progressPercent: 0, completedLessons: [], quizAttempts: 0, practicalStatus: 'none', overdue: true, dueDate: '2026-07-23', learningHours: 0 }
-];
-
-const DEFAULT_PRACTICALS: PracticalSubmission[] = [
-  {
-    id: 'p1',
-    userEmail: 'jessica.taylor@koruna.com',
-    userName: 'Jessica Taylor',
-    courseId: 'c1',
-    courseTitle: 'Mortgage Level 2: Underwriting Fundamentals',
-    submissionText: 'I have prepared a sample credit risk report auditing Form 1040 sole proprietorship schedules, outlining a final recommended front-end DTI of 28% and back-end DTI of 35% based on W-2 validation. Ready for review.',
-    status: 'pending',
-    dateSubmitted: '2026-07-26'
-  }
-];
+const DEFAULT_PRACTICALS: PracticalSubmission[] = [];
 
 const DEFAULT_DEPARTMENTS: Department[] = [
   { id: 'd1', name: 'Software Engineering' },
@@ -773,6 +293,16 @@ const setStorageItem = <T>(key: string, value: T): void => {
   }
 };
 
+const STATIC_SEED_IDS = new Set(['c1', 'c2', 'c3', 'c4']);
+
+export function filterStaticSeeds<T extends { id?: string; courseId?: string }>(items: T[]): T[] {
+  if (!Array.isArray(items)) return [];
+  return items.filter(item => {
+    const id = item?.id || item?.courseId;
+    return !id || !STATIC_SEED_IDS.has(id);
+  });
+};
+
 // --- DATABASE DTO MAPPERS ---
 const parseAssignedUsers = (val: any): CourseAssignment[] => {
   if (!val) return [];
@@ -797,12 +327,46 @@ const parseAssignedUsers = (val: any): CourseAssignment[] => {
   }).filter((x): x is CourseAssignment => x !== null && typeof x === 'object' && 'userId' in x);
 };
 
+const encodeCourseMetadataInDescription = (c: Course): string => {
+  let desc = c.description || '';
+  const firstTagIdx = desc.indexOf('\n\n[');
+  if (firstTagIdx !== -1) {
+    desc = desc.substring(0, firstTagIdx);
+  }
+
+  if (c.trainer) {
+    desc += `\n\n[TRAINER]:${c.trainer}`;
+  }
+  if (c.attachments && c.attachments.length > 0) {
+    desc += `\n\n[ATTACHMENTS]:${JSON.stringify(c.attachments)}`;
+  }
+  if (c.requirements && c.requirements.length > 0) {
+    desc += `\n\n[REQUIREMENTS]:${JSON.stringify(c.requirements)}`;
+  }
+  if (c.contentType) {
+    desc += `\n\n[CONTENT_TYPE]:${c.contentType}`;
+  }
+  if (c.documentContent) {
+    desc += `\n\n[DOCUMENT_CONTENT]:${c.documentContent}`;
+  }
+  if (c.acknowledgmentText) {
+    desc += `\n\n[ACKNOWLEDGMENT_TEXT]:${c.acknowledgmentText}`;
+  }
+  if (c.requiresCertification !== undefined) {
+    desc += `\n\n[REQUIRES_CERTIFICATION]:${c.requiresCertification}`;
+  }
+  return desc;
+};
+
 const mapDBCourse = (db: any): Course => {
   let attachments: { name: string; url: string; size: number }[] = [];
   let trainer: string | undefined = undefined;
   let requirements: string[] | undefined = undefined;
+  let contentType: 'course' | 'document' = 'course';
+  let documentContent: string | undefined = undefined;
+  let acknowledgmentText: string | undefined = undefined;
+  let requiresCertification: boolean = true;
 
-  // Read dedicated columns if available
   if (db.attachments !== undefined && db.attachments !== null) {
     attachments = typeof db.attachments === 'string' ? JSON.parse(db.attachments) : (db.attachments || []);
   }
@@ -812,48 +376,77 @@ const mapDBCourse = (db: any): Course => {
   if (db.requirements !== undefined && db.requirements !== null) {
     requirements = typeof db.requirements === 'string' ? JSON.parse(db.requirements) : (db.requirements || []);
   }
+  if (db.content_type || db.contentType) {
+    contentType = db.content_type || db.contentType;
+  }
+  if (db.document_content || db.documentContent) {
+    documentContent = db.document_content || db.documentContent;
+  }
+  if (db.acknowledgment_text || db.acknowledgmentText) {
+    acknowledgmentText = db.acknowledgment_text || db.acknowledgmentText;
+  }
+  if (db.requires_certification !== undefined) {
+    requiresCertification = Boolean(db.requires_certification);
+  } else if (db.requiresCertification !== undefined) {
+    requiresCertification = Boolean(db.requiresCertification);
+  }
 
   const descVal = db.description || '';
   let description = descVal;
 
-  const attachmentsIdx = descVal.indexOf('\n\n[ATTACHMENTS]:');
-  const trainerIdx = descVal.indexOf('\n\n[TRAINER]:');
-  const requirementsIdx = descVal.indexOf('\n\n[REQUIREMENTS]:');
+  const tagPrefixes = [
+    '\n\n[ATTACHMENTS]:',
+    '\n\n[TRAINER]:',
+    '\n\n[REQUIREMENTS]:',
+    '\n\n[CONTENT_TYPE]:',
+    '\n\n[DOCUMENT_CONTENT]:',
+    '\n\n[ACKNOWLEDGMENT_TEXT]:',
+    '\n\n[REQUIRES_CERTIFICATION]:'
+  ];
 
-  let minIdx = -1;
-  const indices = [attachmentsIdx, trainerIdx, requirementsIdx].filter(i => i !== -1);
-  if (indices.length > 0) {
-    minIdx = Math.min(...indices);
+  const tagIndices = tagPrefixes.map(prefix => descVal.indexOf(prefix)).filter(i => i !== -1);
+  if (tagIndices.length > 0) {
+    const minIdx = Math.min(...tagIndices);
     description = descVal.substring(0, minIdx);
   }
 
-  // Fallback to legacy description parsing if the new columns are empty/undefined
-  if (attachments.length === 0 && attachmentsIdx !== -1) {
-    const nextIndices = [trainerIdx, requirementsIdx].filter(i => i > attachmentsIdx);
-    const endIdx = nextIndices.length > 0 ? Math.min(...nextIndices) : descVal.length;
-    const jsonStr = descVal.substring(attachmentsIdx + '\n\n[ATTACHMENTS]:'.length, endIdx);
+  if (attachments.length === 0 && descVal.includes('\n\n[ATTACHMENTS]:')) {
     try {
-      attachments = JSON.parse(jsonStr);
-    } catch (e) {
-      attachments = [];
-    }
+      const match = descVal.match(/\n\n\[ATTACHMENTS\]:([\s\S]*?)(?=\n\n\[|$)/);
+      if (match && match[1]) attachments = JSON.parse(match[1]);
+    } catch (e) { }
   }
 
-  if (!trainer && trainerIdx !== -1) {
-    const nextIndices = [attachmentsIdx, requirementsIdx].filter(i => i > trainerIdx);
-    const endIdx = nextIndices.length > 0 ? Math.min(...nextIndices) : descVal.length;
-    trainer = descVal.substring(trainerIdx + '\n\n[TRAINER]:'.length, endIdx).trim();
+  if (!trainer && descVal.includes('\n\n[TRAINER]:')) {
+    const match = descVal.match(/\n\n\[TRAINER\]:([\s\S]*?)(?=\n\n\[|$)/);
+    if (match && match[1]) trainer = match[1].trim();
   }
 
-  if ((!requirements || requirements.length === 0) && requirementsIdx !== -1) {
-    const nextIndices = [attachmentsIdx, trainerIdx].filter(i => i > requirementsIdx);
-    const endIdx = nextIndices.length > 0 ? Math.min(...nextIndices) : descVal.length;
-    const jsonStr = descVal.substring(requirementsIdx + '\n\n[REQUIREMENTS]:'.length, endIdx);
+  if ((!requirements || requirements.length === 0) && descVal.includes('\n\n[REQUIREMENTS]:')) {
     try {
-      requirements = JSON.parse(jsonStr);
-    } catch (e) {
-      requirements = [];
-    }
+      const match = descVal.match(/\n\n\[REQUIREMENTS\]:([\s\S]*?)(?=\n\n\[|$)/);
+      if (match && match[1]) requirements = JSON.parse(match[1]);
+    } catch (e) { }
+  }
+
+  if (!db.content_type && !db.contentType && descVal.includes('\n\n[CONTENT_TYPE]:')) {
+    const match = descVal.match(/\n\n\[CONTENT_TYPE\]:([\s\S]*?)(?=\n\n\[|$)/);
+    if (match && match[1]) contentType = match[1].trim() as any;
+  }
+
+  if (!db.document_content && !db.documentContent && descVal.includes('\n\n[DOCUMENT_CONTENT]:')) {
+    const match = descVal.match(/\n\n\[DOCUMENT_CONTENT\]:([\s\S]*?)(?=\n\n\[|$)/);
+    if (match && match[1]) documentContent = match[1].trim();
+  }
+
+  if (!db.acknowledgment_text && !db.acknowledgmentText && descVal.includes('\n\n[ACKNOWLEDGMENT_TEXT]:')) {
+    const match = descVal.match(/\n\n\[ACKNOWLEDGMENT_TEXT\]:([\s\S]*?)(?=\n\n\[|$)/);
+    if (match && match[1]) acknowledgmentText = match[1].trim();
+  }
+
+  if (db.requires_certification === undefined && db.requiresCertification === undefined && descVal.includes('\n\n[REQUIRES_CERTIFICATION]:')) {
+    const match = descVal.match(/\n\n\[REQUIRES_CERTIFICATION\]:([\s\S]*?)(?=\n\n\[|$)/);
+    if (match && match[1]) requiresCertification = match[1].trim() === 'true';
   }
 
   return {
@@ -863,7 +456,7 @@ const mapDBCourse = (db: any): Course => {
     rating: Number(db.rating || 4.5),
     code: db.code,
     level: db.level,
-    description: description,
+    description,
     imgBg: db.img_bg || '#e0f2fe',
     imageUrl: db.image_url || db.imageUrl || undefined,
     lessons: typeof db.lessons === 'string' ? JSON.parse(db.lessons) : (db.lessons || []),
@@ -872,10 +465,10 @@ const mapDBCourse = (db: any): Course => {
     attachments,
     trainer,
     requirements,
-    contentType: db.content_type || db.contentType || 'course',
-    requiresCertification: db.requires_certification !== undefined ? Boolean(db.requires_certification) : (db.requiresCertification !== undefined ? Boolean(db.requiresCertification) : true),
-    documentContent: db.document_content || db.documentContent || undefined,
-    acknowledgmentText: db.acknowledgment_text || db.acknowledgmentText || undefined
+    contentType,
+    requiresCertification,
+    documentContent,
+    acknowledgmentText
   };
 };
 
@@ -890,9 +483,9 @@ const mapCourseToDB = (c: Course) => {
     description: c.description,
     img_bg: c.imgBg,
     image_url: c.imageUrl || null,
-    lessons: JSON.stringify(c.lessons),
-    quiz: JSON.stringify(c.quiz),
-    assigned_users: c.assignedUsers || [],
+    lessons: JSON.stringify(c.lessons || []),
+    quiz: JSON.stringify(c.quiz || []),
+    assigned_users: JSON.stringify(c.assignedUsers || []),
     attachments: JSON.stringify(c.attachments || []),
     trainer: c.trainer || null,
     requirements: JSON.stringify(c.requirements || []),
@@ -939,22 +532,29 @@ const mapDBProgress = (db: any): UserProgress => ({
   lastViewedAt: db.last_viewed_at || undefined
 });
 
-const mapProgressToDB = (p: UserProgress) => ({
-  user_email: p.userEmail.toLowerCase(),
-  course_id: p.courseId,
-  application_id: p.applicationId || 0,
-  progress_percent: p.progressPercent,
-  completed_lessons: JSON.stringify(p.completedLessons),
-  quiz_score: p.quizScore !== undefined ? p.quizScore : null,
-  quiz_attempts: p.quizAttempts,
-  learning_hours: p.learningHours !== undefined ? p.learningHours : null,
-  practical_status: p.practicalStatus,
-  practical_notes: p.practicalNotes || null,
-  overdue: p.overdue,
-  due_date: p.dueDate || null,
-  assigned_by: p.assignedBy || null,
-  last_viewed_at: p.lastViewedAt || null
-});
+const mapProgressToDB = (p: UserProgress) => {
+  const obj: Record<string, any> = {
+    user_email: p.userEmail.toLowerCase(),
+    course_id: p.courseId,
+    application_id: p.applicationId || 0,
+    progress_percent: p.progressPercent,
+    completed_lessons: JSON.stringify(p.completedLessons),
+    quiz_score: p.quizScore !== undefined ? p.quizScore : null,
+    quiz_attempts: p.quizAttempts,
+    practical_status: p.practicalStatus,
+    practical_notes: p.practicalNotes || null,
+    overdue: p.overdue,
+    due_date: p.dueDate || null,
+    assigned_by: p.assignedBy || null
+  };
+  if (p.learningHours !== undefined && p.learningHours !== null) {
+    obj.learning_hours = p.learningHours;
+  }
+  if (p.lastViewedAt !== undefined && p.lastViewedAt !== null) {
+    obj.last_viewed_at = p.lastViewedAt;
+  }
+  return obj;
+};
 
 const mapDBPractical = (db: any): PracticalSubmission => ({
   id: db.id,
@@ -1149,10 +749,126 @@ const mapPostToDB = (p: PostItem) => ({
 
 
 // ==========================================
+// REAL-TIME COURSES SUBSCRIPTION HELPERS
+// ==========================================
+const courseListeners = new Set<(courses: Course[]) => void>();
+let realtimeChannel: any = null;
+let realtimeBroadcastChannel: BroadcastChannel | null = typeof window !== 'undefined' && 'BroadcastChannel' in window ? new BroadcastChannel('koruna_courses_sync') : null;
+let debounceCoursesTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const notifyCourseListeners = () => {
+  if (debounceCoursesTimeout) {
+    clearTimeout(debounceCoursesTimeout);
+  }
+  debounceCoursesTimeout = setTimeout(async () => {
+    try {
+      const freshCourses = await dbService.getCourses();
+      courseListeners.forEach(listener => {
+        try {
+          listener(freshCourses);
+        } catch (err) {
+          console.error('[Realtime Courses] Error in listener callback:', err);
+        }
+      });
+    } catch (err) {
+      console.error('[Realtime Courses] Error fetching updated courses:', err);
+    }
+  }, 100);
+};
+
+// ==========================================
 // DB SERVICE API
 // ==========================================
 
 export const dbService = {
+  notifyCoursesChanged(): void {
+    if (realtimeBroadcastChannel) {
+      try {
+        realtimeBroadcastChannel.postMessage({ type: 'COURSES_UPDATED' });
+      } catch (_) {}
+    }
+    notifyCourseListeners();
+  },
+
+  subscribeToCourses(callback: (courses: Course[]) => void): () => void {
+    courseListeners.add(callback);
+
+    // Initial load callback
+    this.getCourses().then(courses => {
+      try {
+        callback(courses);
+      } catch (err) {
+        console.error('[Realtime Courses] Initial fetch callback error:', err);
+      }
+    });
+
+    // 1. Initialize Supabase Realtime WebSocket channel if configured
+    if (isSupabaseConfigured() && !realtimeChannel) {
+      try {
+        realtimeChannel = supabase
+          .channel('public:courses_realtime')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'courses' },
+            (payload) => {
+              console.log('[Supabase Realtime] Event on "courses":', payload.eventType);
+              notifyCourseListeners();
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'documents' },
+            (payload) => {
+              console.log('[Supabase Realtime] Event on "documents":', payload.eventType);
+              notifyCourseListeners();
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'course_assignments' },
+            (payload) => {
+              console.log('[Supabase Realtime] Event on "course_assignments":', payload.eventType);
+              notifyCourseListeners();
+            }
+          )
+          .subscribe((status) => {
+            console.log('[Supabase Realtime] Channel status for courses:', status);
+          });
+      } catch (err) {
+        console.error('[Supabase Realtime] Subscription error:', err);
+      }
+    }
+
+    // 2. Listen to BroadcastChannel for cross-tab sync
+    const handleBroadcast = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'COURSES_UPDATED') {
+        notifyCourseListeners();
+      }
+    };
+    if (realtimeBroadcastChannel) {
+      realtimeBroadcastChannel.addEventListener('message', handleBroadcast);
+    }
+
+    // 3. Periodic fallback poll (every 5 seconds) to ensure real-time status under any network conditions
+    const intervalId = setInterval(() => {
+      notifyCourseListeners();
+    }, 5000);
+
+    return () => {
+      courseListeners.delete(callback);
+      clearInterval(intervalId);
+      if (realtimeBroadcastChannel) {
+        realtimeBroadcastChannel.removeEventListener('message', handleBroadcast);
+      }
+      if (courseListeners.size === 0 && realtimeChannel) {
+        try {
+          supabase.removeChannel(realtimeChannel);
+        } catch (_) {}
+        realtimeChannel = null;
+      }
+    };
+  },
+
   // --- SYSTEM SETTINGS ---
   getSettings(): SystemSettings {
     return getStorageItem<SystemSettings>('koruna_settings', DEFAULT_SETTINGS);
@@ -1273,6 +989,7 @@ export const dbService = {
     let dbCourses: Course[] = [];
     let dbDocs: Course[] = [];
     let fetchedFromSupabase = false;
+    const assignmentsMap: Record<string, CourseAssignment[]> = {};
 
     if (isSupabaseConfigured()) {
       try {
@@ -1280,14 +997,14 @@ export const dbService = {
           .from('courses')
           .select('*');
         if (data && !error) {
-          if (data.length === 0) {
+          if (data.length === 0 && DEFAULT_COURSES.length > 0) {
             const coursesToInsert = DEFAULT_COURSES.map(c => mapCourseToDB(c));
             const { error: insErr } = await supabase.from('courses').insert(coursesToInsert);
             if (!insErr) {
               dbCourses = DEFAULT_COURSES;
             }
           } else {
-            dbCourses = data.map(db => mapDBCourse(db));
+            dbCourses = filterStaticSeeds(data.map(db => mapDBCourse(db)));
           }
           fetchedFromSupabase = true;
         }
@@ -1300,25 +1017,61 @@ export const dbService = {
           .from('documents')
           .select('*');
         if (docsData && !docsError) {
-          dbDocs = docsData.map(db => mapDBCourse(db));
+          dbDocs = filterStaticSeeds(docsData.map(db => mapDBCourse(db)));
           fetchedFromSupabase = true;
         }
       } catch (err) {
         console.error('Failed to get documents from Supabase:', err);
       }
-    }
 
-    const localCourses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
-    const localDocs = getStorageItem<Course[]>('koruna_documents', []);
-    const localAll = [...localCourses, ...localDocs];
+      try {
+        const { data: assignData, error: assignErr } = await supabase
+          .from('course_assignments')
+          .select('*');
+        if (assignData && !assignErr) {
+          assignData.forEach((row: any) => {
+            const cid = String(row.course_id);
+            if (!assignmentsMap[cid]) {
+              assignmentsMap[cid] = [];
+            }
+            assignmentsMap[cid].push({
+              userId: String(row.user_id),
+              applicationId: Number(row.application_id || 0)
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to query course_assignments table from Supabase:', err);
+      }
+    }
 
     if (fetchedFromSupabase) {
-      // Merge Supabase items and LocalStorage items by ID so newly created or edited local courses are preserved
+      // Return strictly courses/documents fetched from Supabase table, with course_assignments mapped
       const courseMap = new Map<string, Course>();
-      [...dbCourses, ...dbDocs].forEach(c => courseMap.set(c.id, c));
-      localAll.forEach(c => courseMap.set(c.id, c));
-      return Array.from(courseMap.values());
+      [...dbCourses, ...dbDocs].forEach(c => {
+        if (assignmentsMap[c.id] && assignmentsMap[c.id].length > 0) {
+          const existing = c.assignedUsers || [];
+          const merged = [...existing];
+          assignmentsMap[c.id].forEach(a => {
+            if (!merged.some(m => m.userId === a.userId)) {
+              merged.push(a);
+            }
+          });
+          c.assignedUsers = merged;
+        }
+        courseMap.set(c.id, c);
+      });
+      return filterStaticSeeds(Array.from(courseMap.values()));
     }
+
+    const rawLocalCourses = getStorageItem<Course[]>('koruna_courses', []);
+    const localCourses = filterStaticSeeds(rawLocalCourses);
+    if (localCourses.length !== rawLocalCourses.length) {
+      setStorageItem('koruna_courses', localCourses);
+    }
+
+    const localDocs = filterStaticSeeds(getStorageItem<Course[]>('koruna_documents', []));
+    const localAll = filterStaticSeeds([...localCourses, ...localDocs]);
 
     return localAll;
   },
@@ -1330,8 +1083,6 @@ export const dbService = {
 
   async saveCourse(course: Course): Promise<Course> {
     const isDocument = course.contentType === 'document';
-    const targetTable = isDocument ? 'documents' : 'courses';
-    const otherTable = isDocument ? 'courses' : 'documents';
     const targetStorageKey = isDocument ? 'koruna_documents' : 'koruna_courses';
     const otherStorageKey = isDocument ? 'koruna_courses' : 'koruna_documents';
 
@@ -1352,14 +1103,16 @@ export const dbService = {
       setStorageItem(otherStorageKey, filteredOther);
     }
 
-    // 2. Sync to Supabase if configured with fallback payload handling
+    // 2. ALWAYS sync to Supabase "courses" table so created courses are saved for easy access and fetching
     if (isSupabaseConfigured()) {
       try {
-        const dbCourse = mapCourseToDB(course);
-        const { error } = await supabase.from(targetTable).upsert(dbCourse);
-        if (error) {
-          console.warn(`Primary upsert to ${targetTable} returned error:`, error);
-          // Fallback: try upserting to standard 'courses' table with core columns
+        const fullDbCourse = mapCourseToDB(course);
+        const { error: primaryErr } = await supabase.from('courses').upsert(fullDbCourse);
+
+        if (primaryErr) {
+          console.warn('Primary upsert to Supabase "courses" table returned error, trying fallback payload:', primaryErr);
+
+          const descWithMetadata = encodeCourseMetadataInDescription(course);
           const fallbackCourse = {
             id: course.id,
             title: course.title,
@@ -1367,29 +1120,41 @@ export const dbService = {
             rating: course.rating || 4.5,
             code: course.code,
             level: course.level,
-            description: course.description,
+            description: descWithMetadata,
             img_bg: course.imgBg,
             image_url: course.imageUrl || null,
-            lessons: JSON.stringify(course.lessons),
+            lessons: JSON.stringify(course.lessons || []),
             quiz: JSON.stringify(course.quiz || []),
-            assigned_users: course.assignedUsers || [],
+            assigned_users: JSON.stringify(course.assignedUsers || []),
             attachments: JSON.stringify(course.attachments || []),
             trainer: course.trainer || null,
             requirements: JSON.stringify(course.requirements || [])
           };
+
           const { error: fbErr } = await supabase.from('courses').upsert(fallbackCourse);
           if (fbErr) {
-            console.warn('Fallback upsert to courses table also returned error:', fbErr);
+            console.error('Fallback upsert to Supabase "courses" table failed:', fbErr);
+          } else {
+            console.log(`Successfully saved course "${course.title}" (${course.id}) to Supabase "courses" table via fallback payload.`);
           }
         } else {
-          // If content type changed, remove from old table
-          await supabase.from(otherTable).delete().eq('id', course.id);
+          console.log(`Successfully saved course "${course.title}" (${course.id}) to Supabase "courses" table.`);
+        }
+
+        // Dual-write to 'documents' table if it's a document and table exists
+        if (isDocument) {
+          try {
+            await supabase.from('documents').upsert(fullDbCourse);
+          } catch (_) {
+            // documents table is optional
+          }
         }
       } catch (err) {
-        console.error(`Supabase saveCourse to ${targetTable} failed:`, err);
+        console.error('Supabase saveCourse failed:', err);
       }
     }
 
+    this.notifyCoursesChanged();
     return course;
   },
 
@@ -1410,11 +1175,18 @@ export const dbService = {
     const docs = getStorageItem<Course[]>('koruna_documents', []);
     const filteredDocs = docs.filter(c => c.id !== id);
     setStorageItem('koruna_documents', filteredDocs);
+
+    this.notifyCoursesChanged();
   },
 
   // --- USER PROGRESS ---
   getProgressList(): UserProgress[] {
-    return getStorageItem<UserProgress[]>('koruna_progress', DEFAULT_PROGRESS);
+    const rawList = getStorageItem<UserProgress[]>('koruna_progress', []);
+    const filtered = filterStaticSeeds(rawList);
+    if (filtered.length !== rawList.length) {
+      setStorageItem('koruna_progress', filtered);
+    }
+    return filtered;
   },
 
   async getUserProgress(email: string): Promise<UserProgress[]> {
@@ -1426,7 +1198,7 @@ export const dbService = {
           .eq('user_email', email.toLowerCase());
 
         if (data && !error) {
-          const userProg = data.map(db => mapDBProgress(db));
+          const userProg = filterStaticSeeds(data.map(db => mapDBProgress(db)));
           const courses = await this.getCourses();
 
           for (const c of courses) {
@@ -1445,7 +1217,7 @@ export const dbService = {
             }
           }
 
-          return userProg;
+          return filterStaticSeeds(userProg);
         }
       } catch (err) {
         console.error('Failed to get user progress from Supabase:', err);
@@ -1455,8 +1227,8 @@ export const dbService = {
     const list = this.getProgressList();
     let userProg = list.filter(p => p.userEmail.toLowerCase() === email.toLowerCase());
 
-    const localCourses = getStorageItem<Course[]>('koruna_courses', DEFAULT_COURSES);
-    const localDocs = getStorageItem<Course[]>('koruna_documents', []);
+    const localCourses = filterStaticSeeds(getStorageItem<Course[]>('koruna_courses', []));
+    const localDocs = filterStaticSeeds(getStorageItem<Course[]>('koruna_documents', []));
     const courses = [...localCourses, ...localDocs];
     let updated = false;
 
@@ -1478,9 +1250,9 @@ export const dbService = {
     });
 
     if (updated) {
-      setStorageItem('koruna_progress', list);
+      setStorageItem('koruna_progress', filterStaticSeeds(list));
     }
-    return userProg;
+    return filterStaticSeeds(userProg);
   },
 
   async saveUserProgress(prog: UserProgress): Promise<void> {
@@ -1491,7 +1263,19 @@ export const dbService = {
           .from('user_progress')
           .upsert(dbProg);
         if (error) {
-          console.error('Failed to save user progress to Supabase:', error);
+          if (error.code === 'PGRST204' || error.message?.includes('schema cache') || error.message?.includes('last_viewed_at')) {
+            const fallbackProg = { ...dbProg };
+            delete fallbackProg.last_viewed_at;
+            delete fallbackProg.learning_hours;
+            const retryRes = await supabase
+              .from('user_progress')
+              .upsert(fallbackProg);
+            if (retryRes.error) {
+              console.error('Failed to save user progress to Supabase (retry):', retryRes.error);
+            }
+          } else {
+            console.error('Failed to save user progress to Supabase:', error);
+          }
         }
       } catch (err) {
         console.error('Supabase saveUserProgress failed:', err);
@@ -1509,7 +1293,7 @@ export const dbService = {
     } else {
       list.push(prog);
     }
-    setStorageItem('koruna_progress', list);
+    setStorageItem('koruna_progress', filterStaticSeeds(list));
   },
 
   // --- PRACTICAL SUBMISSIONS ---
@@ -1521,21 +1305,26 @@ export const dbService = {
           .select('*')
           .order('created_at', { ascending: false });
         if (data && !error) {
-          if (data.length === 0) {
+          if (data.length === 0 && DEFAULT_PRACTICALS.length > 0) {
             const practicalsToInsert = DEFAULT_PRACTICALS.map(p => mapPracticalToDB(p));
             const { error: insErr } = await supabase.from('practical_submissions').insert(practicalsToInsert);
             if (!insErr) {
               return DEFAULT_PRACTICALS;
             }
           } else {
-            return data.map(db => mapDBPractical(db));
+            return filterStaticSeeds(data.map(db => mapDBPractical(db)));
           }
         }
       } catch (err) {
         console.error('Failed to get practical submissions from Supabase:', err);
       }
     }
-    return getStorageItem<PracticalSubmission[]>('koruna_practicals', DEFAULT_PRACTICALS);
+    const rawSubs = getStorageItem<PracticalSubmission[]>('koruna_practicals', []);
+    const filtered = filterStaticSeeds(rawSubs);
+    if (filtered.length !== rawSubs.length) {
+      setStorageItem('koruna_practicals', filtered);
+    }
+    return filtered;
   },
 
   async submitPractical(sub: Omit<PracticalSubmission, 'id' | 'status' | 'dateSubmitted'>): Promise<PracticalSubmission> {
@@ -1649,6 +1438,22 @@ export const dbService = {
   },
 
   // --- COURSE ASSIGNMENTS ---
+  async getCourseAssignments(courseId?: string): Promise<any[]> {
+    if (isSupabaseConfigured()) {
+      try {
+        let query = supabase.from('course_assignments').select('*');
+        if (courseId) {
+          query = query.eq('course_id', courseId);
+        }
+        const { data, error } = await query;
+        if (data && !error) return data;
+      } catch (err) {
+        console.error('Failed to get course assignments from Supabase:', err);
+      }
+    }
+    return [];
+  },
+
   async assignCourseToUser(courseId: string, email: string, assignedBy?: string): Promise<void> {
     const users = await this.getUsers();
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -1678,6 +1483,27 @@ export const dbService = {
 
     const appId = Math.floor(1000 + Math.random() * 9000);
 
+    // Save to course_assignments table in Supabase
+    if (isSupabaseConfigured()) {
+      try {
+        const targetUserId = user.id || user.userId;
+        if (targetUserId) {
+          await supabase
+            .from('course_assignments')
+            .upsert(
+              {
+                course_id: courseId,
+                user_id: targetUserId,
+                application_id: appId
+              },
+              { onConflict: 'course_id,user_id' }
+            );
+        }
+      } catch (err) {
+        console.warn('Failed to upsert into course_assignments in Supabase:', err);
+      }
+    }
+
     const newProg: UserProgress = {
       userEmail: email.toLowerCase(),
       courseId: courseId,
@@ -1696,18 +1522,16 @@ export const dbService = {
     await this.saveUserProgress(newProg);
 
     let courseTitle = 'New Course';
-    if (user.userId) {
-      const courses = await this.getCourses();
-      const course = courses.find(c => c.id === courseId);
-      if (course) {
-        courseTitle = course.title;
-        const assigned = course.assignedUsers || [];
-        // Ensure no duplicate assignments in the JSON list either
-        const updatedAssigned = assigned.filter(a => a.userId !== String(user.userId));
-        updatedAssigned.push({ userId: String(user.userId), applicationId: appId });
-        course.assignedUsers = updatedAssigned;
-        await this.saveCourse(course);
-      }
+    const courses = await this.getCourses();
+    const course = courses.find(c => c.id === courseId);
+    if (course) {
+      courseTitle = course.title;
+      const assigned = course.assignedUsers || [];
+      const userKey = String(user.id || user.userId);
+      const updatedAssigned = assigned.filter(a => a.userId !== userKey && a.userId !== String(user.userId));
+      updatedAssigned.push({ userId: userKey, applicationId: appId });
+      course.assignedUsers = updatedAssigned;
+      await this.saveCourse(course);
     }
 
     // Create Notification
@@ -1725,16 +1549,29 @@ export const dbService = {
     } catch (err) {
       console.error('Failed to create assignment notification:', err);
     }
+
+    this.notifyCoursesChanged();
   },
 
   async unassignCourseFromUser(courseId: string, email: string): Promise<void> {
     // Fetch existing progress for this user/course
     const existingProgressList = await this.getUserProgress(email);
     const existingProg = existingProgressList.find(p => p.courseId === courseId);
+    const users = await this.getUsers();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-    // Delete the assigned progress record from Supabase
+    // Delete assignment from course_assignments table in Supabase
     if (isSupabaseConfigured()) {
       try {
+        if (user) {
+          const targetUserId = user.id || user.userId;
+          if (targetUserId) {
+            await supabase
+              .from('course_assignments')
+              .delete()
+              .match({ course_id: courseId, user_id: targetUserId });
+          }
+        }
         await supabase
           .from('user_progress')
           .delete()
@@ -1769,14 +1606,13 @@ export const dbService = {
       await this.saveUserProgress(newProg);
     }
 
-    const users = await this.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (user && user.userId) {
+    if (user) {
       const courses = await this.getCourses();
       const course = courses.find(c => c.id === courseId);
       if (course) {
         const assigned = course.assignedUsers || [];
-        const updatedAssigned = assigned.filter(a => a.userId !== String(user.userId));
+        const userKey = String(user.id || user.userId);
+        const updatedAssigned = assigned.filter(a => a.userId !== userKey && a.userId !== String(user.userId));
         course.assignedUsers = updatedAssigned;
         await this.saveCourse(course);
       }

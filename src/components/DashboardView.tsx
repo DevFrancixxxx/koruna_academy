@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import type { UserSessionData, UserRole } from '../services/auth';
 import { dbService, calculateCourseLearningHours, type Course, type Lesson, type QuizQuestion, type UserProgress, type Badge, type PracticalSubmission, type Department, type SystemSettings, type RolePermissions, type DatabaseUser, type Notification } from '../services/db';
-import { AdminSuite } from './AdminSuite';
+import { AdminSuite } from './admin/AdminSuite';
 import { LoadingModal } from './LoadingModal';
 import { CourseStudyView } from './courses/CourseStudyView';
 import { CourseCard } from './courses/CourseCard';
@@ -118,6 +118,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [studyingAssignmentId, setStudyingAssignmentId] = useState<number | null>(null);
   const [activeLessonIdx, setActiveLessonIdx] = useState<number>(0);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+  const [quizTextAnswers, setQuizTextAnswers] = useState<Record<number, string>>({});
   const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
   const [quizScore, setQuizScore] = useState<number>(0);
   const [quizPassed, setQuizPassed] = useState<boolean>(false);
@@ -140,7 +141,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     description: '',
     imgBg: '#e0f2fe',
     imageUrl: '',
-    trainer: userSession.name || 'Dr. Marcus Vance',
+    trainer: userSession.name || '',
     attachments: [] as { name: string; url: string; size: number }[],
     contentType: 'course' as 'course' | 'document',
     requiresCertification: true,
@@ -224,6 +225,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   useEffect(() => {
     loadPlatformData();
+
+    // Subscribe to realtime course updates (Supabase Postgres Realtime + Cross-tab Pub/Sub)
+    const unsubscribe = dbService.subscribeToCourses((updatedCourses) => {
+      setCourses(updatedCourses);
+
+      setStudyingCourseState((prev) => {
+        if (!prev) return null;
+        const matching = updatedCourses.find(c => c.id === prev.id);
+        return matching || prev;
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [userSession.email]);
 
   // Toast notifier helper
@@ -327,6 +343,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setStudyingAssignmentId(applicationId || null);
     setActiveLessonIdx(-1);
     setQuizAnswers({});
+    setQuizTextAnswers({});
     setQuizSubmitted(false);
     setPracticalText('');
 
@@ -392,8 +409,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
+  const handleMarkCourseComplete = async (courseId?: string) => {
+    const targetId = courseId || studyingCourse?.id;
+    if (!targetId) return;
+    const progressList = await dbService.getUserProgress(userSession.email);
+    const prog = progressList.find(p => p.courseId === targetId && (studyingAssignmentId === null || p.applicationId === studyingAssignmentId));
+    if (prog) {
+      prog.progressPercent = 100;
+      const c = studyingCourse || courses.find(item => item.id === targetId);
+      if (c) {
+        prog.learningHours = calculateCourseLearningHours(c, 100);
+      }
+      await dbService.saveUserProgress(prog);
+      await loadPlatformData();
+      showToast(`Course completed: "${c?.title || 'Course'}" 🎉`);
+    }
+  };
+
   const handleQuizAnswer = (questionIdx: number, optionIdx: number) => {
     setQuizAnswers(prev => ({ ...prev, [questionIdx]: optionIdx }));
+  };
+
+  const handleQuizTextAnswer = (questionIdx: number, text: string) => {
+    setQuizTextAnswers(prev => ({ ...prev, [questionIdx]: text }));
   };
 
   const handleQuizSubmit = async () => {
@@ -401,8 +439,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     let correctCount = 0;
     studyingCourse.quiz.forEach((q, idx) => {
-      if (quizAnswers[idx] === q.correctAnswer) {
-        correctCount++;
+      const qType = q.type || (q.options?.length === 2 && (q.options[0]?.toLowerCase() === 'true') ? 'true_false' : (!q.options || q.options.length === 0 || q.answerText) ? 'short_answer' : 'multiple_choice');
+
+      if (qType === 'short_answer') {
+        const userText = (quizTextAnswers[idx] || '').trim().toLowerCase();
+        const keyText = (q.answerText || q.options?.[0] || '').trim().toLowerCase();
+        if (userText && keyText && (userText === keyText || userText.includes(keyText) || keyText.includes(userText))) {
+          correctCount++;
+        }
+      } else {
+        if (quizAnswers[idx] === q.correctAnswer) {
+          correctCount++;
+        }
       }
     });
 
@@ -472,8 +520,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Get date and cert ID for earned certificates
   const getCertData = (courseId: string) => {
-    if (courseId === 'c1') return { date: 'Jul 24, 2026', id: 'CERT-MORT-88402' };
-    if (courseId === 'c2') return { date: 'Jul 20, 2026', id: 'CERT-COMP-01124' };
     return { date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }), id: `CERT-${courseId.toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}` };
   };
 
@@ -549,7 +595,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       description: courseForm.description,
       imgBg: courseForm.imgBg,
       imageUrl: courseForm.imageUrl,
-      trainer: courseForm.trainer || userSession.name || 'Dr. Marcus Vance',
+      trainer: courseForm.trainer || userSession.name || '',
       lessons: lessonsWithIds,
       quiz: isDocument ? [] : courseQuiz,
       attachments: courseForm.attachments,
@@ -586,7 +632,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       description: '',
       imgBg: '#e0f2fe',
       imageUrl: '',
-      trainer: userSession.name || 'Dr. Marcus Vance',
+      trainer: userSession.name || '',
       attachments: [],
       contentType: 'course',
       requiresCertification: true,
@@ -659,7 +705,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
 
   const addQuizQuestionField = () => {
-    setCourseQuiz(prev => [...prev, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+    setCourseQuiz(prev => [...prev, { type: 'multiple_choice', question: '', options: ['', '', '', ''], correctAnswer: 0, answerText: '' }]);
   };
 
   const removeQuizQuestionField = (idx: number) => {
@@ -847,18 +893,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 activeLessonIdx={activeLessonIdx}
                 setActiveLessonIdx={setActiveLessonIdx}
                 quizAnswers={quizAnswers}
+                quizTextAnswers={quizTextAnswers}
                 handleQuizAnswer={handleQuizAnswer}
+                handleQuizTextAnswer={handleQuizTextAnswer}
                 quizSubmitted={quizSubmitted}
                 handleQuizSubmit={handleQuizSubmit}
                 quizPassed={quizPassed}
                 quizScore={quizScore}
                 setQuizAnswers={setQuizAnswers}
+                setQuizTextAnswers={setQuizTextAnswers}
                 setQuizSubmitted={setQuizSubmitted}
                 practicalText={practicalText}
                 setPracticalText={setPracticalText}
                 handlePracticalSubmit={handlePracticalSubmit}
                 userProgress={userProgress}
                 handleMarkLessonComplete={handleMarkLessonComplete}
+                handleMarkCourseComplete={handleMarkCourseComplete}
                 setStudyingCourse={setStudyingCourse}
                 settings={settings}
                 users={users}
@@ -874,18 +924,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               activeLessonIdx={activeLessonIdx}
               setActiveLessonIdx={setActiveLessonIdx}
               quizAnswers={quizAnswers}
+              quizTextAnswers={quizTextAnswers}
               handleQuizAnswer={handleQuizAnswer}
+              handleQuizTextAnswer={handleQuizTextAnswer}
               quizSubmitted={quizSubmitted}
               handleQuizSubmit={handleQuizSubmit}
               quizPassed={quizPassed}
               quizScore={quizScore}
               setQuizAnswers={setQuizAnswers}
+              setQuizTextAnswers={setQuizTextAnswers}
               setQuizSubmitted={setQuizSubmitted}
               practicalText={practicalText}
               setPracticalText={setPracticalText}
               handlePracticalSubmit={handlePracticalSubmit}
               userProgress={userProgress}
               handleMarkLessonComplete={handleMarkLessonComplete}
+              handleMarkCourseComplete={handleMarkCourseComplete}
               setStudyingCourse={setStudyingCourse}
               settings={settings}
               users={users}
@@ -926,7 +980,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="koruna-subview-wrapper">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
-                    <h2 className="koruna-section-title" style={{ marginBottom: '0.5rem' }}>Course Catalogue</h2>
+                    <h2 className="koruna-section-title" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      Course Catalogue
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.2rem 0.65rem',
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        color: '#10b981',
+                        border: '1px solid rgba(16, 185, 129, 0.25)'
+                      }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 6px #10b981' }}></span>
+                        Realtime Live
+                      </span>
+                    </h2>
                     <p style={{ color: 'var(--koruna-text-muted)', fontSize: '0.9rem' }}>
                       Browse all available training across every department.
                     </p>
@@ -945,7 +1016,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           description: '',
                           imgBg: '#e0f2fe',
                           imageUrl: '',
-                          trainer: userSession.name || 'Dr. Marcus Vance',
+                          trainer: userSession.name || '',
                           attachments: [],
                           contentType: 'course',
                           requiresCertification: true,
@@ -1022,25 +1093,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 )}
 
                 {(() => {
+                  const currentUserEmail = (userSession?.email || '').toLowerCase().trim();
                   const assigned = courses.filter(c => {
                     const prog = userProgress.find(
                       p => p.courseId === c.id && (
-                        (userSession.email && p.userEmail.toLowerCase() === userSession.email.toLowerCase()) ||
-                        !p.userEmail
+                        !p.userEmail || (currentUserEmail && p.userEmail.toLowerCase().trim() === currentUserEmail)
                       )
-                    ) || userProgress.find(p => p.courseId === c.id);
+                    );
 
                     const hasAssignedProgress = !!(prog && (prog.dueDate || prog.assignedBy));
                     const hasAssignedCourseFlag = !!c.isAssigned || (
                       !!c.assignedUsers && c.assignedUsers.some(a =>
-                        (userSession.id && String(a.userId) === String(userSession.id)) ||
-                        (userSession.email && a.userId.toLowerCase() === userSession.email.toLowerCase())
+                        (userSession.id && String(a.userId).toLowerCase().trim() === String(userSession.id).toLowerCase().trim()) ||
+                        (userSession.email && String(a.userId).toLowerCase().trim() === currentUserEmail) ||
+                        (currentUserEmail && currentUserEmail.includes(String(a.userId).toLowerCase().trim()))
                       )
                     );
 
                     return hasAssignedProgress || hasAssignedCourseFlag;
                   }).map(c => {
-                    const prog = userProgress.find(p => p.courseId === c.id);
+                    const prog = userProgress.find(p => p.courseId === c.id && (!p.userEmail || p.userEmail.toLowerCase().trim() === currentUserEmail));
                     return { ...c, prog };
                   });
 
@@ -1211,25 +1283,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {[
-                    { name: 'Mortgage Processing & Underwriting', category: 'Core Operations', value: userProgress.find(p => p.courseId === 'c1')?.progressPercent || 0, color: 'var(--koruna-primary)' },
-                    { name: 'Financial Compliance & KYC Audits', category: 'Regulatory Standards', value: userProgress.find(p => p.courseId === 'c2')?.progressPercent || 0, color: 'var(--koruna-primary)' },
-                    { name: 'Customer Service & Advisory Communications', category: 'Relations', value: userProgress.find(p => p.courseId === 'c3')?.progressPercent || 0, color: '#0ea5e9' },
-                    { name: 'Artificial Intelligence Tools (Copilots)', category: 'Technology', value: userProgress.find(p => p.courseId === 'c4')?.progressPercent || 0, color: '#8b5cf6' }
-                  ].map((skill, i) => (
-                    <div key={i} style={{ border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: '#ffffff' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <h4 style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--koruna-text-dark)' }}>{skill.name}</h4>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)' }}>{skill.category}</span>
+                  {courses.length > 0 ? (
+                    courses.map((course, i) => {
+                      const prog = userProgress.find(p => p.courseId === course.id);
+                      const palette = ['var(--koruna-primary)', '#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b'];
+                      const itemColor = palette[i % palette.length];
+                      const val = prog?.progressPercent || 0;
+                      return (
+                        <div key={course.id} style={{ border: '1px solid var(--koruna-border-color)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: '#ffffff' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <h4 style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--koruna-text-dark)' }}>{course.title}</h4>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--koruna-text-muted)' }}>{course.category}</span>
+                            </div>
+                            <span style={{ fontWeight: 800, color: val > 0 ? itemColor : '#a1a1aa', fontSize: '1.1rem' }}>{val}%</span>
+                          </div>
+                          <div style={{ height: '8px', backgroundColor: '#e4e4e7', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${val}%`, backgroundColor: itemColor, borderRadius: '4px', transition: 'width 0.3s ease' }}></div>
+                          </div>
                         </div>
-                        <span style={{ fontWeight: 800, color: skill.value > 0 ? skill.color : '#a1a1aa', fontSize: '1.1rem' }}>{skill.value}%</span>
-                      </div>
-                      <div style={{ height: '8px', backgroundColor: '#e4e4e7', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${skill.value}%`, backgroundColor: skill.color, borderRadius: '4px' }}></div>
-                      </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ border: '1px dashed var(--koruna-border-color)', borderRadius: '12px', padding: '2.5rem', textAlign: 'center', color: 'var(--koruna-text-muted)', fontSize: '0.9rem', background: '#fafafa' }}>
+                      No courses created yet. Create a course to start tracking competency metrics!
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             )}

@@ -13,12 +13,15 @@ interface CourseStudyViewProps {
   activeLessonIdx: number;
   setActiveLessonIdx: React.Dispatch<React.SetStateAction<number>>;
   quizAnswers: Record<number, number>;
+  quizTextAnswers?: Record<number, string>;
   handleQuizAnswer: (questionIdx: number, optionIdx: number) => void;
+  handleQuizTextAnswer?: (questionIdx: number, text: string) => void;
   quizSubmitted: boolean;
   handleQuizSubmit: () => void;
   quizPassed: boolean;
   quizScore: number;
   setQuizAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  setQuizTextAnswers?: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   setQuizSubmitted: React.Dispatch<React.SetStateAction<boolean>>;
   practicalText: string;
   setPracticalText: React.Dispatch<React.SetStateAction<string>>;
@@ -40,12 +43,15 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
   activeLessonIdx,
   setActiveLessonIdx,
   quizAnswers,
+  quizTextAnswers = {},
   handleQuizAnswer,
+  handleQuizTextAnswer,
   quizSubmitted,
   handleQuizSubmit,
   quizPassed,
   quizScore,
   setQuizAnswers,
+  setQuizTextAnswers,
   setQuizSubmitted,
   practicalText,
   setPracticalText,
@@ -89,12 +95,15 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
         <QuizViewer
           studyingCourse={studyingCourse}
           quizAnswers={quizAnswers}
+          quizTextAnswers={quizTextAnswers}
           handleQuizAnswer={handleQuizAnswer}
+          handleQuizTextAnswer={handleQuizTextAnswer}
           quizSubmitted={quizSubmitted}
           handleQuizSubmit={handleQuizSubmit}
           quizPassed={quizPassed}
           quizScore={quizScore}
           setQuizAnswers={setQuizAnswers}
+          setQuizTextAnswers={setQuizTextAnswers}
           setQuizSubmitted={setQuizSubmitted}
           settings={settings}
           setActiveLessonIdx={setActiveLessonIdx}
@@ -104,8 +113,8 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
           showToast={showToast}
         />
 
-        {/* Renders practical tasks underneath the quiz for MORT-202 (c1 course) */}
-        {studyingCourse.id === 'c1' && (
+        {/* Renders practical tasks underneath the quiz for courses requiring practical assessments */}
+        {(studyingCourse.contentType !== 'document' && (studyingCourse.requirements?.some(r => r.toLowerCase().includes('practical') || r.toLowerCase().includes('assessment')) || userProgress.some(p => p.courseId === studyingCourse.id && p.practicalStatus !== 'none'))) && (
           <div style={{ marginTop: '1.5rem' }}>
             <PracticalTask
               studyingCourse={studyingCourse}
@@ -138,6 +147,8 @@ export const CourseStudyView: React.FC<CourseStudyViewProps> = ({
             setActiveLessonIdx={setActiveLessonIdx}
             userProgress={userProgress}
             handleMarkLessonComplete={handleMarkLessonComplete}
+            handleMarkCourseComplete={handleMarkCourseComplete}
+            setStudyingCourse={setStudyingCourse}
           />
         </div>
 

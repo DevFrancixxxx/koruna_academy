@@ -973,8 +973,8 @@ export const CourseDetailView: React.FC<CourseDetailViewProps> = ({
         <CertificateView
           course={studyingCourse}
           userSession={userSession || { name: 'Jessica Timon', email: '', role: 'employee' }}
-          issueDate={studyingCourse.id === 'c1' ? 'Jul 24, 2026' : studyingCourse.id === 'c2' ? 'Jul 20, 2026' : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-          certificateId={studyingCourse.id === 'c1' ? 'CERT-MORT-88402' : studyingCourse.id === 'c2' ? 'CERT-COMP-01124' : `CERT-${studyingCourse.id.toUpperCase()}-2026`}
+          issueDate={new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+          certificateId={`CERT-${studyingCourse.id.toUpperCase()}-2026`}
           onBack={() => setShowCertModal(false)}
           onDone={() => setShowCertModal(false)}
           showToast={showToast}

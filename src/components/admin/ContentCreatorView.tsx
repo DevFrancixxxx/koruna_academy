@@ -1,37 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BookOpen,
-  Zap,
-  FileText,
-  CloudUpload,
-  Trash2,
-  RefreshCw,
-  Layers,
-  Plus,
-  Video,
-  Award,
-  CheckCircle2,
-  Users,
-  Check,
-  ClipboardList,
-  ChevronDown,
-  ChevronUp,
-  ArrowUp,
-  ArrowDown,
-  Play,
-  Eye,
-  Search,
-  Sparkles,
-  AlertCircle,
-  X,
-  HelpCircle,
-  Image
+  BookOpen, Zap, FileText, CloudUpload, Trash2, RefreshCw, Layers, Plus, Award,
+  CheckCircle2, Users, Check, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Play,
+  Eye, Search, AlertCircle, X, HelpCircle, Image as ImageIcon, Paperclip, ListChecks, Settings2
 } from 'lucide-react';
 import type { Course, DatabaseUser, Lesson, QuizQuestion } from '../../services/db';
+import type { UserSessionData } from '../../services/auth';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { CourseCard, CourseBannerHeader } from '../courses/CourseCard';
 
 export interface ContentCreatorViewProps {
+  userSession?: UserSessionData;
   editingCourseId: string | null;
   courses: Course[];
   users: DatabaseUser[];
@@ -67,171 +46,143 @@ export interface ContentCreatorViewProps {
   showToast: (msg: string) => void;
 }
 
-const SECTIONS = [
-  { id: 'details', label: '1. Details & Setup' },
-  { id: 'content', label: '2. Content Builder' },
-  { id: 'resources', label: '3. Resources & Access' },
-  { id: 'review', label: '4. Review & Publish' }
-] as const;
-
-const BG_PRESETS = [
-  { label: 'Ocean Blue', value: '#e0f2fe', gradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' },
-  { label: 'Koruna Berry', value: '#fdf2f8', gradient: 'linear-gradient(135deg, #a31555 0%, #7a0f40 100%)' },
-  { label: 'Emerald Mint', value: '#ecfdf5', gradient: 'linear-gradient(135deg, #059669 0%, #047857 100%)' },
-  { label: 'Amber Gold', value: '#fffbe6', gradient: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' },
-  { label: 'Slate Executive', value: '#f1f5f9', gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)' },
-  { label: 'Royal Violet', value: '#fae8ff', gradient: 'linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%)' }
+type TabId = 'details' | 'content' | 'access' | 'review';
+const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: 'details', label: 'Details', icon: <Settings2 size={14} /> },
+  { id: 'content', label: 'Content', icon: <Layers size={14} /> },
+  { id: 'access', label: 'Resources & access', icon: <Paperclip size={14} /> },
+  { id: 'review', label: 'Review', icon: <ListChecks size={14} /> }
 ];
 
+const BG_PRESETS = [
+  { label: 'Ocean Blue', value: '#e0f2fe', gradient: 'linear-gradient(135deg, #0284c7, #0369a1)' },
+  { label: 'Koruna Berry', value: '#fdf2f8', gradient: 'linear-gradient(135deg, #a31555, #7a0f40)' },
+  { label: 'Emerald Mint', value: '#ecfdf5', gradient: 'linear-gradient(135deg, #059669, #047857)' },
+  { label: 'Amber Gold', value: '#fffbe6', gradient: 'linear-gradient(135deg, #d97706, #b45309)' },
+  { label: 'Slate Executive', value: '#f1f5f9', gradient: 'linear-gradient(135deg, #334155, #1e293b)' },
+  { label: 'Royal Violet', value: '#fae8ff', gradient: 'linear-gradient(135deg, #7e22ce, #6b21a8)' }
+];
+
+const CATEGORIES = ['Onboarding', 'Mortgage', 'Loan Processing', 'Lending', 'Operations', 'AI', 'Compliance', 'Leadership', 'Company Policy'];
+
+const getQType = (q: QuizQuestion): 'multiple_choice' | 'true_false' | 'short_answer' =>
+  (q.type as any) ||
+  (q.options?.length === 2 && q.options[0]?.toLowerCase() === 'true'
+    ? 'true_false'
+    : !q.options || q.options.length === 0 || q.answerText
+      ? 'short_answer'
+      : 'multiple_choice');
+
+const getFileBadge = (filename: string) => {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'pdf') return { label: 'PDF', bg: '#ffe4e6', color: '#e11d48' };
+  if (['doc', 'docx'].includes(ext)) return { label: 'DOC', bg: '#dbeafe', color: '#2563eb' };
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return { label: 'XLS', bg: '#dcfce7', color: '#16a34a' };
+  if (['mp4', 'mov', 'webm', 'avi'].includes(ext)) return { label: 'VID', bg: '#f3e8ff', color: '#9333ea' };
+  if (['zip', 'rar', '7z'].includes(ext)) return { label: 'ZIP', bg: '#fef3c7', color: '#d97706' };
+  return { label: (ext || 'file').slice(0, 4).toUpperCase(), bg: '#f1f5f9', color: '#475569' };
+};
+
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const p = name.trim().split(' ');
+  return (p.length >= 2 ? `${p[0][0]}${p[1][0]}` : name.substring(0, 2)).toUpperCase();
+};
+
+const AVATARS = ['#0284c7', '#a31555', '#059669', '#d97706', '#7e22ce', '#2563eb'];
+const avatarColor = (name: string) => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATARS[Math.abs(h) % AVATARS.length];
+};
+
+const getEmbedUrl = (url: string) => {
+  if (url.includes('youtube.com/watch?v=')) return `https://www.youtube.com/embed/${url.split('v=')[1]?.split('&')[0]}?autoplay=1`;
+  if (url.includes('youtu.be/')) return `https://www.youtube.com/embed/${url.split('youtu.be/')[1]?.split('?')[0]}?autoplay=1`;
+  if (url.includes('vimeo.com/')) return `https://player.vimeo.com/video/${url.split('vimeo.com/')[1]?.split('?')[0]}?autoplay=1`;
+  return url;
+};
+
 export const ContentCreatorView: React.FC<ContentCreatorViewProps> = ({
-  editingCourseId,
-  courses,
-  users,
-  assignedUserEmails,
-  setAssignedUserEmails,
-  courseForm,
-  setCourseForm,
-  courseLessons,
-  setCourseLessons,
-  courseQuiz,
-  setCourseQuiz,
-  courseModules,
-  setCourseModules,
-  handleSaveCourse,
-  resetCourseFormState,
-  onOpenInventoryModal,
-  addQuizQuestionField,
-  removeQuizQuestionField,
-  showToast
+  userSession, editingCourseId, courses, users, assignedUserEmails, setAssignedUserEmails,
+  courseForm, setCourseForm, courseLessons, setCourseLessons, courseQuiz, setCourseQuiz,
+  courseModules, setCourseModules, handleSaveCourse, resetCourseFormState, onOpenInventoryModal,
+  addQuizQuestionField, removeQuizQuestionField, showToast
 }) => {
+  const [tab, setTab] = useState<TabId>('details');
   const [isUploading, setIsUploading] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>('details');
+  const [isCardImageUploading, setIsCardImageUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
-  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('All');
-  const [expandedLessons, setExpandedLessons] = useState<Record<number, boolean>>({ 0: true });
-  const [activeVideoModal, setActiveVideoModal] = useState<string | null>(null);
-  const [docPreviewMode, setDocPreviewMode] = useState(false);
-  const [quizTestMode, setQuizTestMode] = useState(false);
-  const [quizUserAnswers, setQuizUserAnswers] = useState<Record<number, number>>({});
-  const [activeModuleFilter, setActiveModuleFilter] = useState<string>('All');
+  const [deptFilter, setDeptFilter] = useState('All');
+  const [assignTab, setAssignTab] = useState<'all' | 'assigned' | 'unassigned'>('all');
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({ 0: true });
+  const [videoModal, setVideoModal] = useState<string | null>(null);
+  const [docPreview, setDocPreview] = useState(false);
+  const [quizTest, setQuizTest] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number | string>>({});
+  const cardImageRef = useRef<HTMLInputElement>(null);
 
   const isDocument = courseForm.contentType === 'document';
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const patch = (p: Record<string, any>) => setCourseForm((prev: any) => ({ ...prev, ...p }));
 
-  // Intersection observer for section tracking
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = entry.target.getAttribute('data-section-id');
-            if (id) setActiveSection(id);
-          }
-        });
-      },
-      { rootMargin: '-20% 0px -60% 0px', threshold: 0 }
-    );
-    Object.values(sectionRefs.current).forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, [isDocument]);
+    if (!editingCourseId && !courseForm.trainer && userSession?.name) patch({ trainer: userSession.name });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingCourseId, courseForm.trainer, userSession?.name]);
 
-  const scrollToSection = (id: string) => {
-    setActiveSection(id);
-    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const cardImageInputRef = useRef<HTMLInputElement>(null);
-  const [isCardImageUploading, setIsCardImageUploading] = useState(false);
-  const [isCardImageDragging, setIsCardImageDragging] = useState(false);
-
+  /* ---------- Uploads ---------- */
   const handleCardImageUpload = async (file: File) => {
-    if (!file || !file.type.startsWith('image/')) {
-      showToast('Please select a valid image file (PNG, JPG, WebP, etc.).');
-      return;
-    }
-
+    if (!file || !file.type.startsWith('image/')) return showToast('Please select a valid image file (PNG, JPG, WebP).');
     setIsCardImageUploading(true);
     try {
       if (isSupabaseConfigured()) {
-        const fileExt = file.name.split('.').pop() || 'png';
-        const fileName = `card-img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-        const filePath = `course-card-images/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('course-documents')
-          .upload(filePath, file, { cacheControl: '3600', upsert: true });
-
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('course-documents').getPublicUrl(filePath);
-          if (urlData?.publicUrl) {
-            setCourseForm((prev: any) => ({ ...prev, imageUrl: urlData.publicUrl }));
-            showToast('Card cover image uploaded successfully!');
+        const ext = file.name.split('.').pop() || 'png';
+        const path = `course-card-images/card-img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
+        const { error } = await supabase.storage.from('course-documents').upload(path, file, { cacheControl: '3600', upsert: true });
+        if (!error) {
+          const { data } = supabase.storage.from('course-documents').getPublicUrl(path);
+          if (data?.publicUrl) {
+            patch({ imageUrl: data.publicUrl });
+            showToast('Cover image uploaded.');
             setIsCardImageUploading(false);
             return;
           }
         }
       }
-
-      // Fallback to FileReader Data URL
       const reader = new FileReader();
-      reader.onload = () => {
-        setCourseForm((prev: any) => ({ ...prev, imageUrl: reader.result as string }));
-        showToast('Card cover image loaded successfully!');
-        setIsCardImageUploading(false);
-      };
-      reader.onerror = () => {
-        showToast('Failed to read image file.');
-        setIsCardImageUploading(false);
-      };
+      reader.onload = () => { patch({ imageUrl: reader.result as string }); showToast('Cover image loaded.'); setIsCardImageUploading(false); };
+      reader.onerror = () => { showToast('Failed to read image file.'); setIsCardImageUploading(false); };
       reader.readAsDataURL(file);
     } catch (err: any) {
-      showToast(err.message || 'Error uploading card image.');
+      showToast(err.message || 'Error uploading cover image.');
       setIsCardImageUploading(false);
     }
-  };
-
-  // Helper methods for clean state updates
-  const handleRemoveAttachment = (fileIdx: number) => {
-    setCourseForm((prev: any) => ({
-      ...prev,
-      attachments: (prev.attachments || []).filter((_: any, idx: number) => idx !== fileIdx)
-    }));
   };
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setIsUploading(true);
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        if (isSupabaseConfigured()) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-          const filePath = `course-attachments/${fileName}`;
-
-          const { error } = await supabase.storage
-            .from('course-documents')
-            .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-          if (error) throw new Error(`Upload failed for ${file.name}: ${error.message}`);
-          const { data: urlData } = supabase.storage.from('course-documents').getPublicUrl(filePath);
-
-          return { name: file.name, url: urlData.publicUrl, size: file.size };
-        } else {
+      const uploaded = await Promise.all(
+        Array.from(files).map(async (file) => {
+          if (isSupabaseConfigured()) {
+            const path = `course-attachments/${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${file.name.split('.').pop()}`;
+            const { error } = await supabase.storage.from('course-documents').upload(path, file, { cacheControl: '3600', upsert: false });
+            if (error) throw new Error(`Upload failed for ${file.name}: ${error.message}`);
+            const { data } = supabase.storage.from('course-documents').getPublicUrl(path);
+            return { name: file.name, url: data.publicUrl, size: file.size };
+          }
           return new Promise<{ name: string; url: string; size: number }>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve({ name: file.name, url: reader.result as string, size: file.size });
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsDataURL(file);
+            const r = new FileReader();
+            r.onloadend = () => resolve({ name: file.name, url: r.result as string, size: file.size });
+            r.onerror = () => reject(new Error('Failed to read file'));
+            r.readAsDataURL(file);
           });
-        }
-      });
-
-      const uploadedFiles = await Promise.all(uploadPromises);
-      setCourseForm((prev: any) => ({
-        ...prev,
-        attachments: [...(prev.attachments || []), ...uploadedFiles]
-      }));
-      showToast(`Uploaded ${uploadedFiles.length} file(s).`);
+        })
+      );
+      setCourseForm((prev: any) => ({ ...prev, attachments: [...(prev.attachments || []), ...uploaded] }));
+      showToast(`Uploaded ${uploaded.length} file(s).`);
     } catch (err: any) {
       alert(err.message || 'An error occurred during file upload.');
     } finally {
@@ -239,1394 +190,395 @@ export const ContentCreatorView: React.FC<ContentCreatorViewProps> = ({
     }
   };
 
-  const handleUpdateLesson = (idx: number, key: string, value: any) => {
-    setCourseLessons((prev) => {
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], [key]: value };
-      return copy;
+  const removeAttachment = (i: number) =>
+    setCourseForm((prev: any) => ({ ...prev, attachments: (prev.attachments || []).filter((_: any, x: number) => x !== i) }));
+
+  /* ---------- Lessons / modules ---------- */
+  const updateLesson = (idx: number, key: string, value: any) =>
+    setCourseLessons((prev) => { const c = [...prev]; c[idx] = { ...c[idx], [key]: value }; return c; });
+
+  const addLesson = (m: { id: string; title: string }, count: number) => {
+    const idx = courseLessons.length;
+    setCourseLessons((prev) => [...prev, { title: `Lesson ${count + 1}: New lesson`, content: '', moduleId: m.id, moduleTitle: m.title }]);
+    setExpanded((prev) => ({ ...prev, [idx]: true }));
+  };
+
+  const addModule = () => {
+    const n = courseModules.length + 1;
+    const id = `m${Date.now()}`;
+    const title = `Module ${n}: New topic`;
+    setCourseModules((prev) => [...prev, { id, title }]);
+    setExpanded((prev) => ({ ...prev, [courseLessons.length]: true }));
+    setCourseLessons((prev) => [...prev, { title: `Lesson 1: Introduction to Module ${n}`, content: '', moduleId: id, moduleTitle: title }]);
+    showToast(`Created Module ${n}`);
+  };
+
+  const moveLesson = (index: number, dir: 'up' | 'down') => {
+    const to = dir === 'up' ? index - 1 : index + 1;
+    if (to < 0 || to >= courseLessons.length) return;
+    const next = [...courseLessons];
+    const [moved] = next.splice(index, 1);
+    next.splice(to, 0, moved);
+    setCourseLessons(next);
+    setExpanded((prev) => {
+      const s: Record<number, boolean> = {};
+      Object.keys(prev).forEach((k) => {
+        const i = Number(k);
+        if (i === index) s[to] = prev[index];
+        else if (i === to) s[index] = prev[to];
+        else s[i] = prev[i];
+      });
+      return s;
     });
   };
 
-  const handleUpdateQuizQuestion = (qIdx: number, text: string) => {
-    setCourseQuiz((prev) => {
-      const copy = [...prev];
-      copy[qIdx].question = text;
-      return copy;
-    });
+  /* ---------- Quiz ---------- */
+  const updateQuiz = (i: number, p: Partial<QuizQuestion>) =>
+    setCourseQuiz((prev) => { const c = [...prev]; c[i] = { ...c[i], ...p }; return c; });
+
+  const updateQuizType = (i: number, type: 'multiple_choice' | 'true_false' | 'short_answer') =>
+    updateQuiz(i, {
+      type,
+      options: type === 'true_false' ? ['True', 'False'] : type === 'short_answer' ? [] : courseQuiz[i].options?.length === 4 ? courseQuiz[i].options : ['', '', '', ''],
+      correctAnswer: 0,
+      answerText: courseQuiz[i].answerText || ''
+    } as any);
+
+  const updateQuizOption = (qi: number, oi: number, text: string) => {
+    const opts = [...(courseQuiz[qi].options || [])];
+    opts[oi] = text;
+    updateQuiz(qi, { options: opts });
   };
 
-  const handleUpdateQuizOption = (qIdx: number, oIdx: number, text: string) => {
-    setCourseQuiz((prev) => {
-      const copy = [...prev];
-      const opts = [...copy[qIdx].options];
-      opts[oIdx] = text;
-      copy[qIdx].options = opts;
-      return copy;
-    });
-  };
-
-  const handleSetQuizCorrect = (qIdx: number, oIdx: number) => {
-    setCourseQuiz((prev) => {
-      const copy = [...prev];
-      copy[qIdx].correctAnswer = oIdx;
-      return copy;
-    });
-  };
-
-  // Readiness Checklist & Percentage Calculation
-  const readinessChecklist = useMemo(() => {
-    const titleOk = !!courseForm.title.trim();
-    const codeOk = !!courseForm.code.trim();
+  /* ---------- Readiness ---------- */
+  const readiness = useMemo(() => {
+    const titleOk = !!courseForm.title.trim() && !!courseForm.code.trim();
     const descOk = !!courseForm.description.trim();
-
-    let contentOk = false;
-    let assessmentOk = false;
-
+    let contentOk: boolean, assessOk: boolean;
     if (isDocument) {
       contentOk = !!(courseForm.documentContent || '').trim();
-      assessmentOk = !!(courseForm.acknowledgmentText || '').trim();
+      assessOk = !!(courseForm.acknowledgmentText || '').trim();
     } else {
       contentOk = courseLessons.length > 0 && courseLessons.every((l) => l.title.trim() && l.content.trim());
-      // Quiz is optional: if no quiz questions are configured, assessment is valid.
-      // If quiz questions exist, ensure question text and options are filled.
-      const validQuestions = courseQuiz.filter(q => q.question.trim());
-      assessmentOk = validQuestions.length === 0 || validQuestions.every((q) => q.question.trim() && q.options.some((o) => o.trim()));
+      const valid = courseQuiz.filter((q) => q.question.trim());
+      assessOk = valid.length === 0 || valid.every((q) => q.options.some((o) => o.trim()) || getQType(q) === 'short_answer');
     }
-
-    const accessOk = assignedUserEmails.length > 0;
-
-    const items = [
-      { id: 'details', label: 'Basic Title & Code', ok: titleOk && codeOk, targetSection: 'details' },
-      { id: 'desc', label: 'Description & Overview', ok: descOk, targetSection: 'details' },
-      { id: 'content', label: isDocument ? 'Document Body Text' : 'Lessons & Modules', ok: contentOk, targetSection: 'content' },
-      { id: 'assessment', label: isDocument ? 'Acknowledgment Statement' : (courseQuiz.length > 0 ? 'Knowledge Check Quiz' : 'Knowledge Check Quiz (Optional)'), ok: assessmentOk, targetSection: 'content' },
-      { id: 'access', label: 'Assigned Employees', ok: accessOk, targetSection: 'resources' }
+    const items: { id: string; label: string; ok: boolean; tab: TabId }[] = [
+      { id: 'details', label: 'Title & code', ok: titleOk, tab: 'details' },
+      { id: 'desc', label: 'Description', ok: descOk, tab: 'details' },
+      { id: 'content', label: isDocument ? 'Document body' : 'Lessons & modules', ok: contentOk, tab: 'content' },
+      { id: 'assess', label: isDocument ? 'Acknowledgment statement' : courseQuiz.length ? 'Knowledge check quiz' : 'Quiz (optional)', ok: assessOk, tab: 'content' },
+      { id: 'access', label: 'Assigned employees', ok: assignedUserEmails.length > 0, tab: 'access' }
     ];
-
     const completed = items.filter((i) => i.ok).length;
-    const percent = Math.round((completed / items.length) * 100);
-
-    return { items, completed, total: items.length, percent };
+    return { items, completed, total: items.length, percent: Math.round((completed / items.length) * 100) };
   }, [courseForm, isDocument, courseLessons, courseQuiz, assignedUserEmails]);
 
-  // Employee Filtering
+  const tabDone = (id: TabId) =>
+    id === 'details' ? !!courseForm.title.trim() && !!courseForm.code.trim()
+      : id === 'content' ? (isDocument ? !!(courseForm.documentContent || '').trim() : courseLessons.length > 0)
+        : id === 'access' ? assignedUserEmails.length > 0
+          : readiness.percent === 100;
+
+  /* ---------- Employees ---------- */
   const employees = useMemo(() => users.filter((u) => u.role === 'employee'), [users]);
   const departments = useMemo(() => Array.from(new Set(employees.map((e) => e.department).filter(Boolean))), [employees]);
+  const assignedCount = useMemo(() => {
+    const s = new Set(employees.map((e) => e.email));
+    return assignedUserEmails.filter((e) => s.has(e)).length;
+  }, [employees, assignedUserEmails]);
 
-  const filteredEmployees = useMemo(() => {
-    return employees.filter((emp) => {
-      const matchesSearch =
-        emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-        emp.email.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-        (emp.department && emp.department.toLowerCase().includes(employeeSearch.toLowerCase()));
-      const matchesDept = selectedDeptFilter === 'All' || emp.department === selectedDeptFilter;
-      return matchesSearch && matchesDept;
+  const filtered = useMemo(() => {
+    const q = employeeSearch.toLowerCase();
+    return employees.filter((e) => {
+      const match = e.name.toLowerCase().includes(q) || e.email.toLowerCase().includes(q) || (e.department || '').toLowerCase().includes(q);
+      const dept = deptFilter === 'All' || e.department === deptFilter;
+      const on = assignedUserEmails.includes(e.email);
+      return match && dept && (assignTab === 'all' || (assignTab === 'assigned' ? on : !on));
     });
-  }, [employees, employeeSearch, selectedDeptFilter]);
+  }, [employees, employeeSearch, deptFilter, assignTab, assignedUserEmails]);
 
-  const handleSelectAllFiltered = () => {
-    const filteredEmails = filteredEmployees.map((e) => e.email);
-    setAssignedUserEmails((prev) => Array.from(new Set([...prev, ...filteredEmails])));
-  };
+  const selectFiltered = () => { const em = filtered.map((e) => e.email); setAssignedUserEmails((p) => Array.from(new Set([...p, ...em]))); };
+  const clearFiltered = () => { const em = new Set(filtered.map((e) => e.email)); setAssignedUserEmails((p) => p.filter((e) => !em.has(e))); };
 
-  const handleDeselectAllFiltered = () => {
-    const filteredEmails = new Set(filteredEmployees.map((e) => e.email));
-    setAssignedUserEmails((prev) => prev.filter((email) => !filteredEmails.has(email)));
-  };
+  const previewCourse: Course = useMemo(() => ({
+    id: editingCourseId || 'preview-id',
+    title: courseForm.title.trim() || (isDocument ? 'Untitled Document' : 'Untitled Course'),
+    code: courseForm.code.trim() || (isDocument ? 'DOC-000' : 'CRS-101'),
+    category: courseForm.category || 'General',
+    rating: 5.0,
+    level: courseForm.level || 'Beginner',
+    description: courseForm.description.trim() || 'No description provided.',
+    imgBg: courseForm.imgBg || '#e0f2fe',
+    imageUrl: courseForm.imageUrl || undefined,
+    attachments: courseForm.attachments || [],
+    contentType: courseForm.contentType || 'course',
+    requiresCertification: courseForm.requiresCertification !== false,
+    documentContent: courseForm.documentContent || '',
+    acknowledgmentText: courseForm.acknowledgmentText || '',
+    lessons: courseLessons as Lesson[],
+    quiz: courseQuiz
+  }), [courseForm, courseLessons, courseQuiz, editingCourseId, isDocument]);
 
-  // Lesson Reordering
-  const moveLesson = (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= courseLessons.length) return;
-    const updated = [...courseLessons];
-    const [moved] = updated.splice(index, 1);
-    updated.splice(newIndex, 0, moved);
-    setCourseLessons(updated);
+  const attachments = courseForm.attachments || [];
 
-    // Swap accordion state
-    setExpandedLessons((prev) => {
-      const nextState: Record<number, boolean> = {};
-      Object.keys(prev).forEach((k) => {
-        const idx = Number(k);
-        if (idx === index) nextState[newIndex] = prev[index];
-        else if (idx === newIndex) nextState[index] = prev[newIndex];
-        else nextState[idx] = prev[idx];
-      });
-      return nextState;
-    });
-  };
-
-  // Toggle Accordion Lesson
-  const toggleLessonAccordion = (idx: number) => {
-    setExpandedLessons((prev) => ({ ...prev, [idx]: !prev[idx] }));
-  };
-
-  // Mock course object for Live Preview
-  const previewCourse: Course = useMemo(
-    () => ({
-      id: editingCourseId || 'preview-id',
-      title: courseForm.title.trim() || (isDocument ? 'Untitled Document' : 'Untitled Course'),
-      code: courseForm.code.trim() || (isDocument ? 'DOC-000' : 'CRS-101'),
-      category: courseForm.category || 'General',
-      rating: 5.0,
-      level: courseForm.level || 'Beginner',
-      description: courseForm.description.trim() || 'No description provided.',
-      imgBg: courseForm.imgBg || '#e0f2fe',
-      imageUrl: courseForm.imageUrl || undefined,
-      attachments: courseForm.attachments || [],
-      contentType: courseForm.contentType || 'course',
-      requiresCertification: courseForm.requiresCertification !== false,
-      documentContent: courseForm.documentContent || '',
-      acknowledgmentText: courseForm.acknowledgmentText || '',
-      lessons: courseLessons as Lesson[],
-      quiz: courseQuiz
-    }),
-    [courseForm, courseLessons, courseQuiz, editingCourseId, isDocument]
-  );
-
-  // Video embed helper
-  const getEmbedUrl = (url: string) => {
-    if (!url) return null;
-    if (url.includes('youtube.com/watch?v=')) {
-      const id = url.split('v=')[1]?.split('&')[0];
-      return `https://www.youtube.com/embed/${id}?autoplay=1`;
-    }
-    if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube.com/embed/${id}?autoplay=1`;
-    }
-    if (url.includes('vimeo.com/')) {
-      const id = url.split('vimeo.com/')[1]?.split('?')[0];
-      return `https://player.vimeo.com/video/${id}?autoplay=1`;
-    }
-    return url;
-  };
-
+  /* ---------- Render ---------- */
   return (
-    <div className="cc-shell">
-      <style>{`
-        .cc-shell {
-          --cc-doc: #a31555;
-          --cc-doc-soft: #fdf2f8;
-          display: flex;
-          flex-direction: column;
-          gap: 1.25rem;
-          padding-bottom: 3.5rem;
-          font-family: Inter, system-ui, -apple-system, sans-serif;
-        }
+    <div className="cc">
+      <style>{CSS}</style>
 
-        /* Top Header Masthead */
-        .cc-header-masthead {
-          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-          border-radius: 18px;
-          padding: 1.35rem 1.65rem;
-          color: #ffffff;
-          box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 1.2rem;
-          flex-wrap: wrap;
-        }
-        .cc-header-title {
-          display: flex;
-          align-items: center;
-          gap: 0.85rem;
-        }
-        .cc-header-icon {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
-          background: rgba(163, 21, 85, 0.25);
-          border: 1px solid rgba(251, 207, 232, 0.3);
-          color: #f472b6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        .cc-header h1 {
-          font-size: 1.3rem;
-          font-weight: 700;
-          margin: 0;
-          color: #ffffff;
-          letter-spacing: -0.01em;
-        }
-        .cc-header p {
-          margin: 0.2rem 0 0 0;
-          font-size: 0.825rem;
-          color: #94a3b8;
-        }
-        .cc-header-actions {
-          display: flex;
-          gap: 0.6rem;
-          align-items: center;
-        }
-
-        /* Top Mobile & Tablet Stepper Bar */
-        .cc-mobile-stepper {
-          display: none;
-          gap: 0.4rem;
-          overflow-x: auto;
-          padding: 0.4rem 0.2rem;
-          scrollbar-width: none;
-          position: sticky;
-          top: 0;
-          z-index: 30;
-          background: rgba(248, 250, 252, 0.95);
-          backdrop-filter: blur(8px);
-          border-bottom: 1px solid var(--as-line);
-          margin: -0.25rem -0.25rem 0.5rem -0.25rem;
-        }
-        .cc-mobile-step-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.45rem;
-          padding: 0.45rem 0.85rem;
-          border-radius: 999px;
-          font-size: 0.78rem;
-          font-weight: 600;
-          border: 1px solid var(--as-line);
-          background: #ffffff;
-          color: #64748b;
-          white-space: nowrap;
-          cursor: pointer;
-        }
-        .cc-mobile-step-pill.active {
-          background: var(--as-primary);
-          color: #ffffff;
-          border-color: var(--as-primary);
-          box-shadow: 0 4px 12px rgba(163, 21, 85, 0.25);
-        }
-        @media (max-width: 860px) {
-          .cc-mobile-stepper { display: flex; }
-        }
-
-        /* Desktop Layout with Sticky Left Rail */
-        .cc-layout {
-          display: grid;
-          grid-template-columns: 220px minmax(0, 1fr);
-          gap: 1.75rem;
-          align-items: start;
-        }
-        @media (max-width: 860px) {
-          .cc-layout { grid-template-columns: 1fr; }
-          .cc-rail { display: none !important; }
-        }
-
-        /* Desktop Left Stepper Rail */
-        .cc-rail {
-          position: sticky;
-          top: 1.25rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.35rem;
-          background: #ffffff;
-          border: 1px solid var(--as-line);
-          border-radius: 16px;
-          padding: 1.1rem 0.9rem;
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
-        }
-        .cc-rail-header {
-          font-size: 0.72rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          color: #94a3b8;
-          margin-bottom: 0.4rem;
-        }
-        .cc-rail-item {
-          display: flex;
-          align-items: center;
-          gap: 0.65rem;
-          padding: 0.6rem 0.75rem;
-          border-radius: 10px;
-          cursor: pointer;
-          border: none;
-          background: transparent;
-          text-align: left;
-          width: 100%;
-          transition: all 0.15s ease;
-        }
-        .cc-rail-item:hover {
-          background: #f8fafc;
-        }
-        .cc-rail-item.active {
-          background: var(--as-primary-soft);
-        }
-        .cc-rail-dot {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          border: 1.5px solid var(--as-line);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.72rem;
-          font-weight: 700;
-          color: #94a3b8;
-          flex-shrink: 0;
-          background: #fff;
-          transition: all 0.15s ease;
-        }
-        .cc-rail-item.active .cc-rail-dot {
-          border-color: var(--as-primary);
-          background: var(--as-primary);
-          color: #fff;
-        }
-        .cc-rail-item.completed .cc-rail-dot {
-          border-color: var(--as-good);
-          background: var(--as-good);
-          color: #fff;
-        }
-        .cc-rail-item span.label {
-          font-size: 0.82rem;
-          font-weight: 600;
-          color: #64748b;
-        }
-        .cc-rail-item.active span.label {
-          color: var(--as-primary);
-          font-weight: 700;
-        }
-
-        /* Dynamic Progress Card in Rail */
-        .cc-rail-progress {
-          margin-top: 0.85rem;
-          padding-top: 0.85rem;
-          border-top: 1px solid var(--as-line);
-        }
-        .cc-progress-label {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.74rem;
-          color: #475569;
-          margin-bottom: 0.35rem;
-          font-weight: 700;
-        }
-        .cc-progress-track {
-          height: 6px;
-          border-radius: 999px;
-          background: #eef2f7;
-          overflow: hidden;
-        }
-        .cc-progress-fill {
-          height: 100%;
-          border-radius: 999px;
-          background: linear-gradient(90deg, var(--as-primary) 0%, #db2777 100%);
-          transition: width 0.3s ease;
-        }
-
-        /* Content Sections */
-        .cc-main {
-          display: flex;
-          flex-direction: column;
-          gap: 1.65rem;
-          min-width: 0;
-        }
-        .cc-section {
-          scroll-margin-top: 1.5rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-        }
-        .cc-section-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.5rem;
-        }
-        .cc-section-header h2 {
-          font-size: 1.1rem;
-          font-weight: 700;
-          margin: 0;
-          color: var(--as-ink);
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-        .cc-section-header span.sub {
-          font-size: 0.8rem;
-          color: #64748b;
-          font-weight: 500;
-        }
-
-        /* Interactive Type Cards */
-        .cc-type-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 0.85rem;
-        }
-        .cc-type-card {
-          border: 2px solid var(--as-line);
-          border-radius: 14px;
-          padding: 1.1rem;
-          background: #ffffff;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          flex-direction: column;
-          gap: 0.6rem;
-          position: relative;
-        }
-        .cc-type-card:hover {
-          border-color: #cbd5e1;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
-        }
-        .cc-type-card.selected {
-          border-color: var(--as-primary);
-          background: #fdf2f8;
-          box-shadow: 0 8px 24px rgba(163, 21, 85, 0.12);
-        }
-        .cc-type-card.selected.doc {
-          border-color: #be185d;
-          background: #fff1f2;
-        }
-        .cc-type-card-icon {
-          width: 38px;
-          height: 38px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f1f5f9;
-          color: #475569;
-          transition: all 0.2s ease;
-        }
-        .cc-type-card.selected .cc-type-card-icon {
-          background: var(--as-primary);
-          color: #ffffff;
-        }
-
-        /* Background Accent Theme Picker */
-        .cc-bg-picker {
-          display: flex;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-          margin-top: 0.35rem;
-        }
-        .cc-bg-chip {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          border: 2px solid transparent;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #fff;
-        }
-        .cc-bg-chip.active {
-          border-color: var(--as-ink);
-          transform: scale(1.1);
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Form Primitives */
-        .cc-field-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 1rem;
-        }
-
-        /* Toggle Card */
-        .cc-toggle-card {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.85rem;
-          padding: 0.95rem 1.1rem;
-          border: 1px solid var(--as-line);
-          border-radius: 12px;
-          background: #f8fafc;
-          cursor: pointer;
-          transition: border-color 0.15s ease, background 0.15s ease;
-        }
-        .cc-toggle-card:hover {
-          border-color: var(--as-primary-line);
-          background: #fefce8;
-        }
-
-        /* Accordion Lesson Card */
-        .cc-accordion-lesson {
-          border: 1px solid var(--as-line);
-          border-radius: 14px;
-          background: #ffffff;
-          overflow: hidden;
-          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
-          transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-        .cc-accordion-lesson:hover {
-          border-color: #cbd5e1;
-        }
-        .cc-accordion-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0.85rem 1.1rem;
-          background: #f8fafc;
-          cursor: pointer;
-          user-select: none;
-          gap: 0.75rem;
-        }
-        .cc-accordion-header:hover {
-          background: #f1f5f9;
-        }
-        .cc-accordion-body {
-          padding: 1.1rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.85rem;
-          border-top: 1px solid var(--as-line);
-        }
-
-        /* Quiz Question Card */
-        .cc-quiz-card {
-          border: 1px solid var(--as-line);
-          border-radius: 14px;
-          padding: 1.1rem;
-          background: #ffffff;
-          display: flex;
-          flex-direction: column;
-          gap: 0.85rem;
-          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
-        }
-        .cc-quiz-pill-row {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 0.6rem;
-        }
-        .cc-quiz-pill-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.45rem 0.65rem;
-          border: 1px solid var(--as-line);
-          border-radius: 10px;
-          background: #f8fafc;
-          transition: all 0.15s ease;
-        }
-        .cc-quiz-pill-item.is-correct {
-          border-color: var(--as-good);
-          background: var(--as-good-soft);
-        }
-
-        /* Employee Chip Grid & Search */
-        .cc-user-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-          gap: 0.55rem;
-          max-height: 280px;
-          overflow-y: auto;
-          padding: 0.25rem;
-        }
-        .cc-user-chip {
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
-          padding: 0.6rem 0.75rem;
-          border-radius: 10px;
-          border: 1px solid var(--as-line);
-          cursor: pointer;
-          font-size: 0.8rem;
-          background: #fff;
-          transition: all 0.15s ease;
-        }
-        .cc-user-chip:hover {
-          border-color: var(--as-primary);
-        }
-        .cc-user-chip.checked {
-          border-color: var(--as-primary);
-          background: var(--as-primary-soft);
-        }
-
-        /* Pre-flight Checklist Summary */
-        .cc-preflight-card {
-          border: 1px solid var(--as-line);
-          border-radius: 16px;
-          padding: 1.25rem;
-          background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-        }
-        .cc-preflight-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0.6rem 0.85rem;
-          border-radius: 10px;
-          background: #ffffff;
-          border: 1px solid var(--as-line);
-          font-size: 0.825rem;
-        }
-
-        /* Video Modal Backdrop */
-        .cc-video-modal-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.75);
-          backdrop-filter: blur(6px);
-          z-index: 99999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 1.25rem;
-        }
-        .cc-video-modal {
-          background: #000;
-          border-radius: 16px;
-          width: 100%;
-          max-width: 800px;
-          overflow: hidden;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-          position: relative;
-        }
-
-        /* Dropzone */
-        .cc-dropzone {
-          border: 2px dashed #cbd5e1;
-          border-radius: 14px;
-          padding: 1.75rem 1.25rem;
-          text-align: center;
-          position: relative;
-          background: #f8fafc;
-          transition: all 0.15s ease;
-        }
-        .cc-dropzone:hover {
-          border-color: var(--as-primary);
-          background: var(--as-primary-soft);
-        }
-        .cc-dropzone input[type='file'] {
-          position: absolute;
-          inset: 0;
-          opacity: 0;
-          cursor: pointer;
-        }
-      `}</style>
-
-      {/* MOBILE & TABLET TOP STEPPER BAR (<860px) */}
-      <div className="cc-mobile-stepper">
-        {SECTIONS.map((s, idx) => {
-          const isCurrent = activeSection === s.id;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              className={`cc-mobile-step-pill ${isCurrent ? 'active' : ''}`}
-              onClick={() => scrollToSection(s.id)}
-            >
-              <span>{idx + 1}.</span> {s.label.split('.')[1] || s.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* MAIN FORM SHELL */}
       <form id="trainer-course-form" onSubmit={handleSaveCourse}>
-        <div className="cc-layout">
-          {/* DESKTOP SIDE RAIL NAVIGATION */}
-          <nav className="cc-rail">
-            <div className="cc-rail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Course Stepper</span>
-              <button
-                type="button"
-                className="as-btn as-btn--ghost as-btn--sm"
-                style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', height: 'auto' }}
-                onClick={onOpenInventoryModal}
-                title="View Course Inventory"
-              >
-                <BookOpen size={12} /> ({courses.length})
+        {/* Sticky toolbar */}
+        <header className="cc-bar">
+          <div className="cc-bar-title">
+            <span className="cc-bar-icon">{isDocument ? <FileText size={16} /> : <BookOpen size={16} />}</span>
+            <div className="cc-bar-text">
+              <strong>{courseForm.title.trim() || (isDocument ? 'New document' : 'New course')}</strong>
+              <span>{editingCourseId ? 'Editing' : 'Draft'} · {isDocument ? 'Policy acknowledgment' : 'Interactive course'}</span>
+            </div>
+          </div>
+
+          <nav className="cc-tabs" role="tablist">
+            {TABS.map((t) => (
+              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
+                className={`cc-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>
+                {tabDone(t.id) && t.id !== 'review' ? <Check size={13} className="cc-tab-ok" /> : t.icon}
+                <span>{t.label}</span>
               </button>
-            </div>
-            {SECTIONS.map((s, i) => {
-              const isCurrent = activeSection === s.id;
-              let isStepDone = false;
-              if (s.id === 'details') isStepDone = !!courseForm.title.trim() && !!courseForm.code.trim();
-              if (s.id === 'content')
-                isStepDone = isDocument
-                  ? !!(courseForm.documentContent || '').trim()
-                  : courseLessons.length > 0;
-              if (s.id === 'resources') isStepDone = assignedUserEmails.length > 0;
-              if (s.id === 'review') isStepDone = readinessChecklist.percent === 100;
-
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`cc-rail-item ${isCurrent ? 'active' : ''} ${isStepDone ? 'completed' : ''}`}
-                  onClick={() => scrollToSection(s.id)}
-                >
-                  <span className="cc-rail-dot">
-                    {isStepDone ? <Check size={13} style={{ strokeWidth: 3 }} /> : i + 1}
-                  </span>
-                  <span className="label">{s.label.split('.')[1] || s.label}</span>
-                </button>
-              );
-            })}
-
-            {/* Dynamic Progress Card */}
-            <div className="cc-rail-progress">
-              <div className="cc-progress-label">
-                <span>Readiness Progress</span>
-                <span style={{ color: readinessChecklist.percent === 100 ? 'var(--as-good)' : 'var(--as-primary)' }}>
-                  {readinessChecklist.percent}%
-                </span>
-              </div>
-              <div className="cc-progress-track">
-                <div className="cc-progress-fill" style={{ width: `${readinessChecklist.percent}%` }} />
-              </div>
-            </div>
+            ))}
           </nav>
 
-          {/* MAIN SECTIONS CONTAINER */}
-          <div className="cc-main">
-            {/* SECTION 1: DETAILS & SETUP */}
-            <div
-              className="cc-section"
-              data-section-id="details"
-              ref={(el) => {
-                sectionRefs.current.details = el;
-              }}
-            >
-              <div className="cc-section-header">
-                <h2>
-                  <BookOpen size={18} style={{ color: 'var(--as-primary)' }} /> Details & Setup
-                </h2>
-                <span className="sub">Configure format, background, title, and metadata</span>
+          <div className="cc-bar-actions">
+            <div className="cc-meter" title="Publish readiness">
+              <div className="cc-meter-track"><div style={{ width: `${readiness.percent}%` }} className={readiness.percent === 100 ? 'full' : ''} /></div>
+              <span>{readiness.percent}%</span>
+            </div>
+            <button type="button" className="cc-btn ghost" onClick={onOpenInventoryModal} title="Course inventory">
+              <BookOpen size={14} /> {courses.length}
+            </button>
+            {editingCourseId && <button type="button" className="cc-btn" onClick={resetCourseFormState}>Cancel</button>}
+            <button type="submit" disabled={isUploading} className="cc-btn primary">
+              {isUploading ? <RefreshCw size={14} className="cc-spin" /> : editingCourseId ? <Check size={14} /> : <Zap size={14} />}
+              {isUploading ? 'Uploading' : editingCourseId ? 'Save' : 'Publish'}
+            </button>
+          </div>
+        </header>
+
+        {/* ===== DETAILS ===== */}
+        {tab === 'details' && (
+          <div className="cc-grid-main">
+            <section className="cc-card">
+              <div className="cc-seg" role="radiogroup" aria-label="Content format">
+                <button type="button" className={!isDocument ? 'on' : ''} onClick={() => patch({ contentType: 'course' })}>
+                  <BookOpen size={14} /> Interactive course
+                </button>
+                <button type="button" className={isDocument ? 'on' : ''} onClick={() => patch({ contentType: 'document' })}>
+                  <FileText size={14} /> Policy & document
+                </button>
               </div>
 
-              <div className="as-card as-card--pad" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                {/* Visual Content Type Selector */}
-                <div>
-                  <label className="as-label" style={{ marginBottom: '0.6rem', display: 'block' }}>
-                    Select Content Format *
-                  </label>
-                  <div className="cc-type-cards">
-                    <div
-                      className={`cc-type-card ${!isDocument ? 'selected' : ''}`}
-                      onClick={() => setCourseForm((prev: any) => ({ ...prev, contentType: 'course' }))}
-                    >
-                      <div className="cc-type-card-icon">
-                        <BookOpen size={20} />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.925rem', color: 'var(--as-ink)' }}>
-                          Interactive Course
-                        </div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', lineHeight: '1.4' }}>
-                          Structured multi-module track with interactive video lessons, downloadable materials, and a knowledge quiz.
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`cc-type-card ${isDocument ? 'selected doc' : ''}`}
-                      onClick={() => setCourseForm((prev: any) => ({ ...prev, contentType: 'document' }))}
-                    >
-                      <div className="cc-type-card-icon" style={{ background: isDocument ? '#be185d' : '#f1f5f9' }}>
-                        <FileText size={20} />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.925rem', color: 'var(--as-ink)' }}>
-                          Policy & Document Acknowledgment
-                        </div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', lineHeight: '1.4' }}>
-                          Company policy or procedure for employees to review, download attachments, and check a formal acknowledgment.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Course Card Cover Image Upload */}
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--as-line)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div>
-                      <label className="as-label" style={{ marginBottom: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem' }}>
-                        <Image size={16} style={{ color: 'var(--as-primary)' }} /> Course Card Cover Image
-                      </label>
-                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
-                        Upload a custom thumbnail image displayed on course cards across all dashboards.
-                      </p>
-                    </div>
-                    {courseForm.imageUrl && (
-                      <button
-                        type="button"
-                        className="as-btn as-btn--danger as-btn--sm"
-                        style={{ height: '32px', fontSize: '0.75rem', padding: '0 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                        onClick={() => setCourseForm((prev: any) => ({ ...prev, imageUrl: '' }))}
-                      >
-                        <Trash2 size={13} /> Remove Custom Image
-                      </button>
-                    )}
-                  </div>
-
-                  <input
-                    ref={cardImageInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleCardImageUpload(file);
-                      e.target.value = '';
-                    }}
-                  />
-
-                  {courseForm.imageUrl ? (
-                    <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', height: '140px', border: '1px solid var(--as-line)', background: '#0f172a' }}>
-                      <img
-                        src={courseForm.imageUrl}
-                        alt="Course Card Cover"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <div style={{ position: 'absolute', bottom: '10px', right: '10px', display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          type="button"
-                          className="as-btn as-btn--secondary as-btn--sm"
-                          style={{ background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.2)', height: '32px', fontSize: '0.75rem' }}
-                          onClick={() => cardImageInputRef.current?.click()}
-                        >
-                          <CloudUpload size={14} /> Change Image
-                        </button>
-                      </div>
-                      <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(16, 185, 129, 0.9)', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, backdropFilter: 'blur(4px)' }}>
-                        ✓ Custom Image Set
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      onDragOver={(e) => { e.preventDefault(); setIsCardImageDragging(true); }}
-                      onDragLeave={() => setIsCardImageDragging(false)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setIsCardImageDragging(false);
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) handleCardImageUpload(file);
-                      }}
-                      onClick={() => cardImageInputRef.current?.click()}
-                      style={{
-                        border: `2px dashed ${isCardImageDragging ? 'var(--as-primary)' : '#cbd5e1'}`,
-                        borderRadius: '10px',
-                        padding: '1.25rem',
-                        textAlign: 'center',
-                        background: isCardImageDragging ? '#f0f9ff' : '#ffffff',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <CloudUpload size={28} style={{ color: isCardImageDragging ? 'var(--as-primary)' : '#94a3b8', marginBottom: '0.35rem' }} />
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
-                        {isCardImageUploading ? 'Processing image file...' : 'Click or drag & drop image here to upload cover'}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-                        Supports PNG, JPG, WebP, SVG (Recommended: 16:9 ratio, max 5MB)
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Optional Image URL Input */}
-                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div className="as-field" style={{ margin: 0 }}>
-                      <label className="as-label" style={{ fontSize: '0.75rem', color: '#64748b' }}>Or paste image URL directly:</label>
-                      <input
-                        type="url"
-                        className="as-input"
-                        style={{ height: '34px', fontSize: '0.8rem' }}
-                        placeholder="https://example.com/course-banner.jpg"
-                        value={courseForm.imageUrl || ''}
-                        onChange={(e) => setCourseForm((prev: any) => ({ ...prev, imageUrl: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Banner / Cover Preset Selector */}
-                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid var(--as-line)' }}>
-                  <label className="as-label" style={{ marginBottom: '0.35rem', display: 'block' }}>
-                    Course Banner Theme Accent (imgBg)
-                  </label>
-                  <div className="cc-bg-picker">
-                    {BG_PRESETS.map((p) => (
-                      <button
-                        key={p.value}
-                        type="button"
-                        title={p.label}
-                        className={`cc-bg-chip ${courseForm.imgBg === p.value ? 'active' : ''}`}
-                        style={{ background: p.gradient }}
-                        onClick={() => setCourseForm({ ...courseForm, imgBg: p.value })}
-                      >
-                        {courseForm.imgBg === p.value && <Check size={14} />}
-                      </button>
-                    ))}
-                  </div>
-
-                  {!courseForm.imageUrl && (
-                    <div style={{ marginTop: '0.85rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '0.35rem' }}>
-                        Functional Banner Preview (No image upload required)
-                      </div>
-                      <CourseBannerHeader
-                        course={{
-                          title: courseForm.title || (isDocument ? 'Document Title' : 'Course Title'),
-                          category: courseForm.category || 'Mortgage',
-                          code: courseForm.code || 'CRS-101',
-                          imgBg: courseForm.imgBg,
-                          contentType: courseForm.contentType
-                        }}
-                        height="110px"
-                        borderRadius="10px"
-                      >
-                        {courseForm.code && (
-                          <div style={{ background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', padding: '2px 8px', borderRadius: '6px', color: '#ffffff', fontSize: '0.72rem', fontWeight: 700, width: 'fit-content' }}>
-                            {courseForm.code}
-                          </div>
-                        )}
-                      </CourseBannerHeader>
-                    </div>
-                  )}
-                </div>
-
-                {/* Grid Inputs */}
-                <div className="cc-field-grid">
-                  <div className="as-field">
-                    <label className="as-label">{isDocument ? 'Document Title *' : 'Course Title *'}</label>
-                    <input
-                      type="text"
-                      className="as-input"
-                      value={courseForm.title}
-                      onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
-                      placeholder={isDocument ? '2026 Employee Remote Work Policy' : 'Mortgage Origination Fundamentals'}
-                      required
-                    />
-                  </div>
-                  <div className="as-field">
-                    <label className="as-label">{isDocument ? 'Document Code *' : 'Course Code *'}</label>
-                    <input
-                      type="text"
-                      className="as-input"
-                      value={courseForm.code}
-                      onChange={(e) => setCourseForm({ ...courseForm, code: e.target.value })}
-                      placeholder={isDocument ? 'DOC-POL-2026' : 'MORT-101'}
-                      required
-                    />
-                  </div>
-                  <div className="as-field">
-                    <label className="as-label">Category</label>
-                    <select
-                      className="as-select"
-                      value={courseForm.category}
-                      onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
-                    >
-                      <option value="Mortgage">Mortgage</option>
-                      <option value="Lending">Lending</option>
-                      <option value="Operations">Operations</option>
-                      <option value="AI">AI / Technology</option>
-                      <option value="Compliance">Compliance</option>
-                      <option value="Leadership">Leadership</option>
-                      <option value="Company Policy">Company Policy</option>
-                    </select>
-                  </div>
-                  <div className="as-field">
-                    <label className="as-label">Difficulty / Level</label>
-                    <select
-                      className="as-select"
-                      value={courseForm.level}
-                      onChange={(e) => setCourseForm({ ...courseForm, level: e.target.value as any })}
-                    >
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
-                    </select>
-                  </div>
-                  <div className="as-field">
-                    <label className="as-label">Trainer Name</label>
-                    <input
-                      type="text"
-                      className="as-input"
-                      value={courseForm.trainer || ''}
-                      onChange={(e) => setCourseForm({ ...courseForm, trainer: e.target.value })}
-                      placeholder="e.g. Dr. Marcus Vance"
-                    />
-                  </div>
-                </div>
-
-                <div className="as-field">
-                  <label className="as-label">Description & Learning Objectives</label>
-                  <textarea
-                    className="as-textarea"
-                    value={courseForm.description}
-                    onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
-                    placeholder={
-                      isDocument
-                        ? 'Brief overview of what this policy or document covers...'
-                        : 'An introductory course designed to teach the fundamentals...'
-                    }
-                  />
-                </div>
-
-                {/* Certification Toggle Card */}
-                <label className="cc-toggle-card">
-                  <input
-                    type="checkbox"
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--as-primary)', cursor: 'pointer', marginTop: '2px' }}
-                    checked={courseForm.requiresCertification !== false}
-                    onChange={(e) => setCourseForm({ ...courseForm, requiresCertification: e.target.checked })}
-                  />
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--as-ink)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Award size={16} style={{ color: 'var(--as-primary)' }} />
-                      Issue Official Certificate on Completion
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.4', marginTop: '0.15rem' }}>
-                      Employees earn an official diploma certificate upon completing this {isDocument ? 'document acknowledgment' : 'course'}.
-                    </div>
-                  </div>
+              <div className="cc-fields">
+                <label className="cc-f span2">
+                  <span>{isDocument ? 'Document title' : 'Course title'} *</span>
+                  <input className="cc-in" required value={courseForm.title} onChange={(e) => patch({ title: e.target.value })}
+                    placeholder={isDocument ? '2026 Employee Remote Work Policy' : 'Mortgage Origination Fundamentals'} />
+                </label>
+                <label className="cc-f">
+                  <span>{isDocument ? 'Document code' : 'Course code'} *</span>
+                  <input className="cc-in" required value={courseForm.code} onChange={(e) => patch({ code: e.target.value })}
+                    placeholder={isDocument ? 'DOC-POL-2026' : 'MORT-101'} />
+                </label>
+                <label className="cc-f">
+                  <span>Category</span>
+                  <select className="cc-in" value={courseForm.category} onChange={(e) => patch({ category: e.target.value })}>
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c === 'AI' ? 'AI / Technology' : c}</option>)}
+                  </select>
+                </label>
+                <label className="cc-f">
+                  <span>Level</span>
+                  <select className="cc-in" value={courseForm.level} onChange={(e) => patch({ level: e.target.value as any })}>
+                    <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+                  </select>
+                </label>
+                <label className="cc-f">
+                  <span>Trainer</span>
+                  <input className="cc-in" value={courseForm.trainer ?? userSession?.name ?? ''} onChange={(e) => patch({ trainer: e.target.value })}
+                    placeholder={userSession?.name || 'Trainer name'} />
+                </label>
+                <label className="cc-f span2">
+                  <span>Description & learning objectives</span>
+                  <textarea className="cc-in" rows={3} value={courseForm.description} onChange={(e) => patch({ description: e.target.value })}
+                    placeholder={isDocument ? 'Brief overview of what this policy covers...' : 'What learners will be able to do after this course...'} />
                 </label>
               </div>
-            </div>
 
-            {/* SECTION 2: CONTENT BUILDER */}
-            <div
-              className="cc-section"
-              data-section-id="content"
-              ref={(el) => {
-                sectionRefs.current.content = el;
-              }}
-            >
-              <div className="cc-section-header">
-                <h2>
-                  <Layers size={18} style={{ color: 'var(--as-primary)' }} /> Content Builder
-                </h2>
-                <span className="sub">
-                  {isDocument ? 'Document text body and acknowledgment' : 'Modules, lessons, videos, and quiz questions'}
-                </span>
-              </div>
+              <label className="cc-switch">
+                <input type="checkbox" checked={courseForm.requiresCertification !== false}
+                  onChange={(e) => patch({ requiresCertification: e.target.checked })} />
+                <Award size={15} />
+                <span>Issue certificate on completion</span>
+              </label>
+            </section>
 
-              {isDocument ? (
-                /* DOCUMENT MODE */
-                <div className="as-card as-card--pad" style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="as-label" style={{ margin: 0 }}>
-                      Document Body Text *
-                    </label>
-                    <button
-                      type="button"
-                      className="as-btn as-btn--outline as-btn--sm"
-                      onClick={() => setDocPreviewMode(!docPreviewMode)}
-                    >
-                      <Eye size={14} /> {docPreviewMode ? 'Edit Mode' : 'Live Reader Preview'}
-                    </button>
-                  </div>
+            <aside className="cc-card cc-side">
+              <div className="cc-card-h"><ImageIcon size={14} /> Card cover</div>
+              <input ref={cardImageRef} type="file" accept="image/*" hidden
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCardImageUpload(f); e.target.value = ''; }} />
 
-                  {docPreviewMode ? (
-                    <div
-                      style={{
-                        padding: '1.25rem',
-                        background: '#ffffff',
-                        border: '1px solid var(--as-line)',
-                        borderRadius: '12px',
-                        minHeight: '220px',
-                        fontSize: '0.9rem',
-                        lineHeight: '1.6',
-                        whiteSpace: 'pre-wrap',
-                        color: 'var(--as-ink)'
-                      }}
-                    >
-                      {courseForm.documentContent || <span className="as-muted">No document body entered yet.</span>}
-                    </div>
-                  ) : (
-                    <div className="as-field">
-                      <textarea
-                        className="as-textarea"
-                        style={{ minHeight: '240px', fontFamily: 'var(--font-sans)', fontSize: '0.875rem', lineHeight: '1.5' }}
-                        value={courseForm.documentContent || ''}
-                        onChange={(e) => setCourseForm({ ...courseForm, documentContent: e.target.value })}
-                        placeholder="Type or paste the complete policy text, guidelines, instructions, or standard operating procedure..."
-                      />
-                    </div>
-                  )}
-
-                  <div className="as-field">
-                    <label className="as-label">Employee Acknowledgment Statement *</label>
-                    <input
-                      type="text"
-                      className="as-input"
-                      value={courseForm.acknowledgmentText || ''}
-                      onChange={(e) => setCourseForm({ ...courseForm, acknowledgmentText: e.target.value })}
-                      placeholder="I have read, understood, and agree to the policies and terms outlined in this document."
-                    />
-                    <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
-                      Employees check this box to confirm compliance.
-                    </div>
+              {courseForm.imageUrl ? (
+                <div className="cc-cover">
+                  <img src={courseForm.imageUrl} alt="Course cover" />
+                  <div className="cc-cover-actions">
+                    <button type="button" className="cc-btn sm" onClick={() => cardImageRef.current?.click()}><CloudUpload size={13} /> Change</button>
+                    <button type="button" className="cc-btn sm danger" onClick={() => patch({ imageUrl: '' })}><Trash2 size={13} /></button>
                   </div>
                 </div>
               ) : (
-                /* COURSE MODE */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                  {/* MODULES MANAGER */}
-                  <div className="as-card as-card--pad">
-                    <div className="as-flex-between" style={{ marginBottom: '0.85rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                        <Layers size={17} style={{ color: 'var(--as-primary)' }} />
-                        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Course Modules</h3>
-                        <span className="as-badge-count">{courseModules.length}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="as-btn as-btn--outline as-btn--sm"
-                        onClick={() => {
-                          const nextId = `m${courseModules.length + 1}`;
-                          setCourseModules((prev) => [...prev, { id: nextId, title: `Module ${prev.length + 1}` }]);
-                        }}
-                      >
-                        <Plus size={14} /> Add Module
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
-                      {courseModules.map((m) => (
-                        <div
-                          key={m.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.5rem 0.7rem',
-                            border: '1px solid var(--as-line)',
-                            borderRadius: '10px',
-                            background: '#ffffff'
-                          }}
-                        >
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--as-primary)', minWidth: '26px' }}>
-                            {m.id.toUpperCase()}:
-                          </span>
-                          <input
-                            type="text"
-                            className="as-input"
-                            style={{ height: '32px', fontSize: '0.825rem', flex: 1 }}
-                            value={m.title}
-                            placeholder="Module title"
-                            onChange={(e) => {
-                              const updatedTitle = e.target.value;
-                              setCourseModules((prev) =>
-                                prev.map((item) => (item.id === m.id ? { ...item, title: updatedTitle } : item))
-                              );
-                              setCourseLessons((prev) =>
-                                prev.map((l) => (l.moduleId === m.id ? { ...l, moduleTitle: updatedTitle } : l))
-                              );
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="as-icon-btn"
-                            disabled={courseModules.length === 1}
-                            onClick={() => {
-                              if (courseModules.length === 1) return;
-                              const remainingModules = courseModules.filter((item) => item.id !== m.id);
-                              const fallbackModule = remainingModules[0];
-                              setCourseLessons((prev) =>
-                                prev.map((l) => {
-                                  if (l.moduleId === m.id || !l.moduleId) {
-                                    return { ...l, moduleId: fallbackModule.id, moduleTitle: fallbackModule.title };
-                                  }
-                                  return l;
-                                })
-                              );
-                              setCourseModules(remainingModules);
-                            }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      ))}
+                <>
+                  <div className={`cc-drop ${isDragging ? 'drag' : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleCardImageUpload(f); }}
+                    onClick={() => cardImageRef.current?.click()}>
+                    <CloudUpload size={18} />
+                    <div>
+                      <strong>{isCardImageUploading ? 'Processing...' : 'Drop an image or click to upload'}</strong>
+                      <span>16:9 recommended · PNG, JPG, WebP</span>
                     </div>
                   </div>
+                  <div className="cc-chips">
+                    {BG_PRESETS.map((p) => (
+                      <button key={p.value} type="button" title={p.label} style={{ background: p.gradient }}
+                        className={`cc-chip ${courseForm.imgBg === p.value ? 'on' : ''}`} onClick={() => patch({ imgBg: p.value })}>
+                        {courseForm.imgBg === p.value && <Check size={12} />}
+                      </button>
+                    ))}
+                  </div>
+                  <CourseBannerHeader
+                    course={{
+                      title: courseForm.title || (isDocument ? 'Document title' : 'Course title'), category: courseForm.category || 'Mortgage',
+                      code: courseForm.code || 'CRS-101', imgBg: courseForm.imgBg, contentType: courseForm.contentType
+                    }}
+                    height="96px" borderRadius="10px" />
+                </>
+              )}
+              <label className="cc-f">
+                <span>Or paste image URL</span>
+                <input type="url" className="cc-in" placeholder="https://example.com/banner.jpg"
+                  value={courseForm.imageUrl || ''} onChange={(e) => patch({ imageUrl: e.target.value })} />
+              </label>
+            </aside>
+          </div>
+        )}
 
-                  {/* ACCORDION LESSON CARDS */}
-                  <div className="as-card as-card--pad">
-                    <div className="as-flex-between" style={{ marginBottom: '0.85rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                        <Video size={17} style={{ color: 'var(--as-primary)' }} />
-                        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Lessons</h3>
-                        <span className="as-badge-count">{courseLessons.length}</span>
-                      </div>
+        {/* ===== CONTENT ===== */}
+        {tab === 'content' && (isDocument ? (
+          <section className="cc-card">
+            <div className="cc-card-h between">
+              <span><FileText size={14} /> Document body *</span>
+              <button type="button" className="cc-btn sm" onClick={() => setDocPreview(!docPreview)}>
+                <Eye size={13} /> {docPreview ? 'Edit' : 'Reader preview'}
+              </button>
+            </div>
+            {docPreview ? (
+              <div className="cc-reader">{courseForm.documentContent || <span className="cc-muted">No document body entered yet.</span>}</div>
+            ) : (
+              <textarea className="cc-in" rows={14} value={courseForm.documentContent || ''}
+                onChange={(e) => patch({ documentContent: e.target.value })}
+                placeholder="Type or paste the complete policy text, guidelines, or procedure..." />
+            )}
+            <label className="cc-f">
+              <span>Acknowledgment statement *</span>
+              <input className="cc-in" value={courseForm.acknowledgmentText || ''} onChange={(e) => patch({ acknowledgmentText: e.target.value })}
+                placeholder="I have read, understood, and agree to the policies outlined in this document." />
+              <em>Employees tick this box to confirm.</em>
+            </label>
+          </section>
+        ) : (
+          <div className="cc-stack">
+            <div className="cc-card-h between cc-plain">
+              <span><Layers size={14} /> {courseModules.length} {courseModules.length === 1 ? 'module' : 'modules'} · {courseLessons.length} lessons</span>
+              <button type="button" className="cc-btn primary sm" onClick={addModule}><Plus size={13} /> Add module</button>
+            </div>
 
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                        {/* Module filter tabs */}
-                        <select
-                          className="as-select as-select--auto"
-                          value={activeModuleFilter}
-                          onChange={(e) => setActiveModuleFilter(e.target.value)}
-                        >
-                          <option value="All">All Modules</option>
-                          {courseModules.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.id.toUpperCase()}: {m.title}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="as-btn as-btn--primary as-btn--sm"
-                          onClick={() => {
-                            const mod = courseModules[0] || { id: 'm1', title: 'Introduction' };
-                            const newIdx = courseLessons.length;
-                            setCourseLessons((prev) => [
-                              ...prev,
-                              { title: `Lesson ${prev.length + 1}: New Lesson`, content: '', moduleId: mod.id, moduleTitle: mod.title }
-                            ]);
-                            setExpandedLessons((prev) => ({ ...prev, [newIdx]: true }));
-                          }}
-                        >
-                          <Plus size={14} /> Add Lesson
-                        </button>
-                      </div>
-                    </div>
+            {courseModules.map((m, mIdx) => {
+              const modLessons = courseLessons.filter((l) => l.moduleId === m.id || (!l.moduleId && mIdx === 0));
+              return (
+                <section key={m.id} className="cc-card cc-module">
+                  <div className="cc-module-h">
+                    <span className="cc-badge">M{mIdx + 1}</span>
+                    <input className="cc-in cc-title-in" value={m.title} placeholder="Module title"
+                      onChange={(e) => {
+                        const t = e.target.value;
+                        setCourseModules((p) => p.map((i) => (i.id === m.id ? { ...i, title: t } : i)));
+                        setCourseLessons((p) => p.map((l) => (l.moduleId === m.id ? { ...l, moduleTitle: t } : l)));
+                      }} />
+                    <span className="cc-count">{modLessons.length}</span>
+                    <button type="button" className="cc-btn sm" onClick={() => addLesson(m, modLessons.length)}><Plus size={13} /> Lesson</button>
+                    {courseModules.length > 1 && (
+                      <button type="button" className="cc-ico danger" title="Delete module"
+                        onClick={() => {
+                          const rest = courseModules.filter((i) => i.id !== m.id);
+                          setCourseLessons((p) => p.map((l) => (l.moduleId === m.id ? { ...l, moduleId: rest[0].id, moduleTitle: rest[0].title } : l)));
+                          setCourseModules(rest);
+                          showToast(`Deleted Module ${mIdx + 1}`);
+                        }}><Trash2 size={14} /></button>
+                    )}
+                  </div>
 
-                    {/* Lesson Accordion Stack */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {courseLessons.map((lesson, idx) => {
-                        if (activeModuleFilter !== 'All' && lesson.moduleId !== activeModuleFilter) return null;
-                        const isExpanded = expandedLessons[idx] ?? false;
-                        const matchedMod = courseModules.find((m) => m.id === lesson.moduleId);
-                        const modTag = matchedMod ? `${matchedMod.id.toUpperCase()} · ${matchedMod.title}` : 'M1';
-
+                  {modLessons.length === 0 ? (
+                    <button type="button" className="cc-empty" onClick={() => addLesson(m, 0)}>
+                      <Plus size={14} /> Add the first lesson
+                    </button>
+                  ) : (
+                    <div className="cc-lessons">
+                      {modLessons.map((lesson, li) => {
+                        const gi = courseLessons.indexOf(lesson);
+                        const open = expanded[gi] ?? false;
                         return (
-                          <div key={idx} className="cc-accordion-lesson">
-                            {/* Accordion Header */}
-                            <div className="cc-accordion-header" onClick={() => toggleLessonAccordion(idx)}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
-                                <span
-                                  className="as-pill"
-                                  style={{ background: 'var(--as-primary-soft)', color: 'var(--as-primary)', whiteSpace: 'nowrap' }}
-                                >
-                                  {modTag}
-                                </span>
-                                <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--as-ink)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                  Lesson {idx + 1}: {lesson.title || 'Untitled'}
-                                </span>
-                                {lesson.videoUrl && (
-                                  <span style={{ fontSize: '0.72rem', color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                                    <Play size={11} /> Video
-                                  </span>
-                                )}
+                          <div key={gi} className={`cc-lesson ${open ? 'open' : ''}`}>
+                            <div className="cc-lesson-h" onClick={() => setExpanded((p) => ({ ...p, [gi]: !p[gi] }))}>
+                              <span className="cc-badge soft">L{li + 1}</span>
+                              <span className="cc-lesson-t">{lesson.title || 'Untitled lesson'}</span>
+                              {lesson.videoUrl && <span className="cc-vid"><Play size={11} /> Video</span>}
+                              <div className="cc-lesson-a" onClick={(e) => e.stopPropagation()}>
+                                <button type="button" className="cc-ico" disabled={gi === 0} onClick={() => moveLesson(gi, 'up')} title="Move up"><ArrowUp size={13} /></button>
+                                <button type="button" className="cc-ico" disabled={gi === courseLessons.length - 1} onClick={() => moveLesson(gi, 'down')} title="Move down"><ArrowDown size={13} /></button>
+                                <button type="button" className="cc-ico danger" disabled={courseLessons.length === 1}
+                                  onClick={() => setCourseLessons((p) => p.filter((_, x) => x !== gi))} title="Delete lesson"><Trash2 size={13} /></button>
                               </div>
-
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }} onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  type="button"
-                                  className="as-icon-btn"
-                                  disabled={idx === 0}
-                                  onClick={() => moveLesson(idx, 'up')}
-                                  title="Move Up"
-                                >
-                                  <ArrowUp size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="as-icon-btn"
-                                  disabled={idx === courseLessons.length - 1}
-                                  onClick={() => moveLesson(idx, 'down')}
-                                  title="Move Down"
-                                >
-                                  <ArrowDown size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="as-icon-btn"
-                                  disabled={courseLessons.length === 1}
-                                  onClick={() => setCourseLessons((prev) => prev.filter((_, lIdx) => lIdx !== idx))}
-                                  title="Delete Lesson"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="as-icon-btn"
-                                  style={{ color: '#64748b' }}
-                                  onClick={() => toggleLessonAccordion(idx)}
-                                >
-                                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </button>
-                              </div>
+                              {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                             </div>
-
-                            {/* Accordion Body */}
-                            {isExpanded && (
-                              <div className="cc-accordion-body">
-                                <div className="as-form-grid-2">
-                                  <div className="as-field">
-                                    <label className="as-label">Lesson Title</label>
-                                    <input
-                                      type="text"
-                                      className="as-input"
-                                      value={lesson.title}
-                                      onChange={(e) => handleUpdateLesson(idx, 'title', e.target.value)}
-                                    />
-                                  </div>
-                                  <div className="as-field">
-                                    <label className="as-label">Assigned Module</label>
-                                    <select
-                                      className="as-select"
-                                      value={lesson.moduleId || courseModules[0]?.id || 'm1'}
+                            {open && (
+                              <div className="cc-lesson-b">
+                                <div className="cc-fields">
+                                  <label className="cc-f"><span>Lesson title</span>
+                                    <input className="cc-in" value={lesson.title} onChange={(e) => updateLesson(gi, 'title', e.target.value)} />
+                                  </label>
+                                  <label className="cc-f"><span>Module</span>
+                                    <select className="cc-in" value={lesson.moduleId || m.id}
                                       onChange={(e) => {
-                                        const selectedModId = e.target.value;
-                                        const targetMod = courseModules.find((m) => m.id === selectedModId);
-                                        setCourseLessons((prev) => {
-                                          const copy = [...prev];
-                                          copy[idx] = {
-                                            ...copy[idx],
-                                            moduleId: selectedModId,
-                                            moduleTitle: targetMod ? targetMod.title : 'Introduction'
-                                          };
-                                          return copy;
+                                        const t = courseModules.find((i) => i.id === e.target.value);
+                                        setCourseLessons((p) => {
+                                          const c = [...p];
+                                          c[gi] = { ...c[gi], moduleId: e.target.value, moduleTitle: t ? t.title : m.title };
+                                          return c;
                                         });
-                                      }}
-                                    >
-                                      {courseModules.map((m) => (
-                                        <option key={m.id} value={m.id}>
-                                          {m.id.toUpperCase()}: {m.title}
-                                        </option>
-                                      ))}
+                                      }}>
+                                      {courseModules.map((mi, x) => <option key={mi.id} value={mi.id}>M{x + 1}: {mi.title}</option>)}
                                     </select>
-                                  </div>
-                                </div>
-
-                                <div className="as-field">
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <label className="as-label">Video Stream URL (YouTube, Vimeo, MP4)</label>
-                                    {lesson.videoUrl && (
-                                      <button
-                                        type="button"
-                                        className="as-btn as-btn--ghost as-btn--sm"
-                                        style={{ color: 'var(--as-primary)', fontSize: '0.75rem', height: '24px' }}
-                                        onClick={() => setActiveVideoModal(lesson.videoUrl || null)}
-                                      >
-                                        <Play size={12} /> Test Player
-                                      </button>
-                                    )}
-                                  </div>
-                                  <input
-                                    type="url"
-                                    className="as-input"
-                                    value={lesson.videoUrl || ''}
-                                    placeholder="https://www.youtube.com/watch?v=..."
-                                    onChange={(e) => handleUpdateLesson(idx, 'videoUrl', e.target.value)}
-                                  />
-                                </div>
-
-                                <div className="as-field">
-                                  <label className="as-label">Lesson Reading Content & Instructions</label>
-                                  <textarea
-                                    className="as-textarea"
-                                    style={{ minHeight: '85px' }}
-                                    value={lesson.content}
-                                    placeholder="Enter reading material for this lesson..."
-                                    onChange={(e) => handleUpdateLesson(idx, 'content', e.target.value)}
-                                  />
+                                  </label>
+                                  <label className="cc-f span2">
+                                    <span className="cc-between">Video URL (YouTube, Vimeo, MP4)
+                                      {lesson.videoUrl && <button type="button" className="cc-link" onClick={() => setVideoModal(lesson.videoUrl || null)}><Play size={11} /> Test player</button>}
+                                    </span>
+                                    <input type="url" className="cc-in" value={lesson.videoUrl || ''} placeholder="https://www.youtube.com/watch?v=..."
+                                      onChange={(e) => updateLesson(gi, 'videoUrl', e.target.value)} />
+                                  </label>
+                                  <label className="cc-f span2"><span>Reading content</span>
+                                    <textarea className="cc-in" rows={4} value={lesson.content} placeholder="Reading material for this lesson..."
+                                      onChange={(e) => updateLesson(gi, 'content', e.target.value)} />
+                                  </label>
                                 </div>
                               </div>
                             )}
@@ -1634,469 +586,240 @@ export const ContentCreatorView: React.FC<ContentCreatorViewProps> = ({
                         );
                       })}
                     </div>
-                  </div>
+                  )}
+                </section>
+              );
+            })}
 
-                  {/* KNOWLEDGE CHECK QUIZ BUILDER (OPTIONAL) */}
-                  <div className="as-card as-card--pad">
-                    <div className="as-flex-between" style={{ marginBottom: '0.85rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                        <Award size={17} style={{ color: 'var(--as-warn)' }} />
-                        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Knowledge Check Quiz</h3>
-                        <span className="as-pill" style={{ background: '#f1f5f9', color: '#64748b', fontSize: '0.725rem', fontWeight: 600 }}>
-                          Optional
-                        </span>
-                        <span className="as-pill" style={{ background: 'var(--as-warn-soft)', color: 'var(--as-warn)' }}>
-                          {courseQuiz.length} Questions
-                        </span>
-                      </div>
+            {/* Quiz */}
+            <section className="cc-card">
+              <div className="cc-card-h between">
+                <span><Award size={14} /> Knowledge check <em className="cc-tag">Optional</em> <em className="cc-tag warn">{courseQuiz.length} questions</em></span>
+                <div className="cc-row">
+                  {courseQuiz.length > 0 && (
+                    <>
+                      <button type="button" className="cc-btn sm" onClick={() => setQuizTest(!quizTest)}><HelpCircle size={13} /> {quizTest ? 'Edit' : 'Test'}</button>
+                      <button type="button" className="cc-btn sm danger" onClick={() => setCourseQuiz([])}><Trash2 size={13} /> Clear</button>
+                    </>
+                  )}
+                  <button type="button" className="cc-btn sm primary" onClick={addQuizQuestionField}><Plus size={13} /> Question</button>
+                </div>
+              </div>
 
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                        {courseQuiz.length > 0 && (
+              {courseQuiz.length === 0 ? (
+                <p className="cc-muted cc-note">No quiz yet. Learners will complete the course by reviewing all lessons.</p>
+              ) : quizTest ? (
+                <div className="cc-stack tight">
+                  {courseQuiz.map((q, qi) => {
+                    const t = getQType(q);
+                    const opts = t === 'true_false' ? ['True', 'False'] : q.options || [];
+                    return (
+                      <div key={qi} className="cc-q">
+                        <div className="cc-q-t">Q{qi + 1}. {q.question || 'Untitled question'}</div>
+                        {t === 'short_answer' ? (
                           <>
-                            <button
-                              type="button"
-                              className="as-btn as-btn--outline as-btn--sm"
-                              onClick={() => setQuizTestMode(!quizTestMode)}
-                            >
-                              <HelpCircle size={14} /> {quizTestMode ? 'Edit Questions' : 'Test Quiz Mode'}
-                            </button>
-                            <button
-                              type="button"
-                              className="as-btn as-btn--danger as-btn--sm"
-                              style={{ height: '32px', fontSize: '0.75rem', padding: '0 0.6rem' }}
-                              onClick={() => setCourseQuiz([])}
-                            >
-                              <Trash2 size={13} /> Remove Quiz
-                            </button>
+                            <input className="cc-in" placeholder="Type answer..." onChange={(e) => setQuizAnswers((p) => ({ ...p, [qi]: e.target.value }))} />
+                            <em className="cc-muted">Expected: <strong>{q.answerText || 'None'}</strong></em>
                           </>
+                        ) : (
+                          <div className="cc-row wrap">
+                            {opts.map((opt, oi) => {
+                              const sel = quizAnswers[qi] === oi;
+                              const ok = q.correctAnswer === oi;
+                              return (
+                                <button key={oi} type="button" className={`cc-opt ${sel ? (ok ? 'ok' : 'bad') : ''}`}
+                                  onClick={() => setQuizAnswers((p) => ({ ...p, [qi]: oi }))}>
+                                  <b>{String.fromCharCode(65 + oi)}</b> {opt}{sel && (ok ? ' ✓' : ' ✕')}
+                                </button>
+                              );
+                            })}
+                          </div>
                         )}
-                        <button
-                          type="button"
-                          className="as-btn as-btn--sm"
-                          style={{ background: '#ea580c', color: '#fff' }}
-                          onClick={addQuizQuestionField}
-                        >
-                          <Plus size={14} /> Add Question
-                        </button>
                       </div>
-                    </div>
-
-                    {courseQuiz.length === 0 ? (
-                      <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
-                        <Award size={32} style={{ color: '#94a3b8', marginBottom: '0.4rem' }} />
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#334155' }}>No Assessment Quiz Configured (Optional)</div>
-                        <p style={{ fontSize: '0.8rem', margin: '0.2rem 0 0.85rem 0', color: '#64748b' }}>
-                          This course can be published without a quiz. Enrolled employees will complete the course by reviewing all lessons.
-                        </p>
-                        <button
-                          type="button"
-                          className="as-btn as-btn--sm"
-                          style={{ background: '#ea580c', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                          onClick={addQuizQuestionField}
-                        >
-                          <Plus size={14} /> Add Optional Quiz
-                        </button>
-                      </div>
-                    ) : quizTestMode ? (
-                      /* Quiz Interactive Test Mode */
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: '#fff7ed', padding: '1.25rem', borderRadius: '12px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <Sparkles size={16} /> Interactive Quiz Test Mode (Student View)
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="cc-stack tight">
+                  {courseQuiz.map((q, qi) => {
+                    const t = getQType(q);
+                    return (
+                      <div key={qi} className="cc-q">
+                        <div className="cc-row">
+                          <span className="cc-badge warn">Q{qi + 1}</span>
+                          <select className="cc-in cc-w-type" value={t} onChange={(e) => updateQuizType(qi, e.target.value as any)}>
+                            <option value="multiple_choice">Multiple choice</option>
+                            <option value="true_false">True / False</option>
+                            <option value="short_answer">Short answer</option>
+                          </select>
+                          <input className="cc-in grow" value={q.question} placeholder="Question text..." onChange={(e) => updateQuiz(qi, { question: e.target.value })} />
+                          <button type="button" className="cc-ico danger" onClick={() => removeQuizQuestionField(qi)} title="Remove question"><Trash2 size={14} /></button>
                         </div>
-                        {courseQuiz.map((q, qIdx) => (
-                          <div key={qIdx} style={{ background: '#fff', padding: '1rem', borderRadius: '10px', border: '1px solid #ffedd5' }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.6rem' }}>
-                              Q{qIdx + 1}: {q.question || 'Untitled Question'}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                              {q.options.map((opt, oIdx) => {
-                                const selected = quizUserAnswers[qIdx] === oIdx;
-                                const isCorrect = q.correctAnswer === oIdx;
-                                return (
-                                  <button
-                                    key={oIdx}
-                                    type="button"
-                                    style={{
-                                      textAlign: 'left',
-                                      padding: '0.55rem 0.85rem',
-                                      borderRadius: '8px',
-                                      fontSize: '0.825rem',
-                                      border: selected
-                                        ? isCorrect
-                                          ? '2px solid #16a34a'
-                                          : '2px solid #dc2626'
-                                        : '1px solid #e2e8f0',
-                                      background: selected ? (isCorrect ? '#f0fdf4' : '#fef2f2') : '#fff',
-                                      fontWeight: selected ? 700 : 500
-                                    }}
-                                    onClick={() => setQuizUserAnswers((prev) => ({ ...prev, [qIdx]: oIdx }))}
-                                  >
-                                    <span style={{ fontWeight: 700, marginRight: '0.5rem' }}>{String.fromCharCode(65 + oIdx)}:</span>
-                                    {opt}
-                                    {selected && (isCorrect ? '  ✅ Correct!' : '  ❌ Incorrect')}
-                                  </button>
-                                );
-                              })}
-                            </div>
+                        {t === 'short_answer' ? (
+                          <input className="cc-in" value={q.answerText || ''} placeholder="Expected answer (e.g. Underwriting)"
+                            onChange={(e) => updateQuiz(qi, { answerText: e.target.value } as any)} />
+                        ) : t === 'true_false' ? (
+                          <div className="cc-row">
+                            <span className="cc-muted">Correct answer:</span>
+                            {['True', 'False'].map((l, oi) => (
+                              <button key={l} type="button" className={`cc-opt ${q.correctAnswer === oi ? 'ok' : ''}`} onClick={() => updateQuiz(qi, { correctAnswer: oi })}>{l}</button>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      /* Quiz Editor Stack */
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                        {courseQuiz.map((q, idx) => (
-                          <div key={idx} className="cc-quiz-card">
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--as-warn)', minWidth: '32px' }}>
-                                Q{idx + 1}:
-                              </span>
-                              <input
-                                type="text"
-                                className="as-input"
-                                style={{ flex: 1 }}
-                                value={q.question}
-                                placeholder="Enter quiz question..."
-                                onChange={(e) => handleUpdateQuizQuestion(idx, e.target.value)}
-                              />
-                              <button
-                                type="button"
-                                className="as-icon-btn"
-                                onClick={() => removeQuizQuestionField(idx)}
-                                title="Remove Question"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-
-                            {/* Options Grid with Clickable Radio Selection */}
-                            <div className="cc-quiz-pill-row">
-                              {q.options.map((opt, oIdx) => {
-                                const isCorrect = q.correctAnswer === oIdx;
-                                return (
-                                  <div key={oIdx} className={`cc-quiz-pill-item ${isCorrect ? 'is-correct' : ''}`}>
-                                    <button
-                                      type="button"
-                                      title={isCorrect ? 'Correct Answer' : 'Set as Correct Answer'}
-                                      style={{
-                                        border: 'none',
-                                        background: isCorrect ? 'var(--as-good)' : '#cbd5e1',
-                                        color: '#fff',
-                                        width: '24px',
-                                        height: '24px',
-                                        borderRadius: '50%',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 800,
-                                        cursor: 'pointer',
-                                        flexShrink: 0
-                                      }}
-                                      onClick={() => handleSetQuizCorrect(idx, oIdx)}
-                                    >
-                                      {String.fromCharCode(65 + oIdx)}
-                                    </button>
-
-                                    <input
-                                      type="text"
-                                      className="as-input"
-                                      style={{ height: '32px', fontSize: '0.8rem', flex: 1 }}
-                                      value={opt}
-                                      placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
-                                      onChange={(e) => handleUpdateQuizOption(idx, oIdx, e.target.value)}
-                                    />
-                                  </div>
-                                );
-                              })}
-                            </div>
+                        ) : (
+                          <div className="cc-opts">
+                            {(q.options || ['', '', '', '']).map((opt, oi) => (
+                              <div key={oi} className={`cc-optrow ${q.correctAnswer === oi ? 'ok' : ''}`}>
+                                <button type="button" title="Mark as correct" onClick={() => updateQuiz(qi, { correctAnswer: oi })}>{String.fromCharCode(65 + oi)}</button>
+                                <input className="cc-in" value={opt} placeholder={`Option ${String.fromCharCode(65 + oi)}`} onChange={(e) => updateQuizOption(qi, oi, e.target.value)} />
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
               )}
-            </div>
+            </section>
+          </div>
+        ))}
 
-            {/* SECTION 3: RESOURCES & ACCESS */}
-            <div
-              className="cc-section"
-              data-section-id="resources"
-              ref={(el) => {
-                sectionRefs.current.resources = el;
-              }}
-            >
-              <div className="cc-section-header">
-                <h2>
-                  <Users size={18} style={{ color: 'var(--as-primary)' }} /> Resources & Access
-                </h2>
-                <span className="sub">Attachments and employee assignment matrix</span>
+        {/* ===== ACCESS ===== */}
+        {tab === 'access' && (
+          <div className="cc-grid-access">
+            <section className="cc-card">
+              <div className="cc-card-h between">
+                <span><Paperclip size={14} /> Attachments</span>
+                <em className="cc-tag">{attachments.length} file{attachments.length === 1 ? '' : 's'}</em>
               </div>
-
-              <div className="as-card as-card--pad" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                {/* Drag and Drop File Upload */}
+              <div className="cc-drop file">
+                <input type="file" multiple disabled={isUploading} onChange={(e) => handleFileUpload(e.target.files)} />
+                {isUploading ? <RefreshCw size={18} className="cc-spin" /> : <CloudUpload size={18} />}
                 <div>
-                  <label className="as-label" style={{ marginBottom: '0.4rem', display: 'block' }}>
-                    Document Attachments & Resources
-                  </label>
-                  <div className="cc-dropzone">
-                    <input
-                      type="file"
-                      multiple
-                      disabled={isUploading}
-                      onChange={(e) => handleFileUpload(e.target.files)}
-                    />
-                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--as-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.4rem' }}>
-                      <CloudUpload size={18} style={{ color: 'var(--as-primary)' }} />
-                    </div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--as-ink)' }}>
-                      {isUploading ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <RefreshCw size={14} style={{ animation: 'spin 1.2s linear infinite' }} /> Uploading files...
-                        </span>
-                      ) : (
-                        <>
-                          Drag & drop materials, or <span style={{ color: 'var(--as-primary)', textDecoration: 'underline' }}>browse files</span>
-                        </>
-                      )}
-                    </div>
-                    <div className="as-muted" style={{ fontSize: '0.73rem', marginTop: '0.2rem' }}>
-                      Supports PDF, MP4, DOCX, ZIP files
-                    </div>
-                  </div>
-
-                  {/* Uploaded File Cards */}
-                  {courseForm.attachments && courseForm.attachments.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.65rem' }}>
-                      {courseForm.attachments.map((file, fileIdx) => (
-                        <div
-                          key={fileIdx}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '0.5rem 0.85rem',
-                            background: '#fff',
-                            border: '1px solid var(--as-line)',
-                            borderRadius: '10px',
-                            fontSize: '0.8rem'
-                          }}
-                        >
-                          <span style={{ fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            📄 {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
-                          <button
-                            type="button"
-                            className="as-icon-btn"
-                            onClick={() => handleRemoveAttachment(fileIdx)}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* EMPLOYEE ASSIGNMENT MATRIX */}
-                <div>
-                  <div className="as-flex-between" style={{ marginBottom: '0.6rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <Users size={16} style={{ color: 'var(--as-primary)' }} />
-                      <label className="as-label" style={{ margin: 0, fontSize: '0.85rem' }}>
-                        Assign Employees ({assignedUserEmails.length} Selected)
-                      </label>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button type="button" className="as-btn as-btn--ghost as-btn--sm" onClick={handleSelectAllFiltered}>
-                        Select All Filtered
-                      </button>
-                      <button type="button" className="as-btn as-btn--ghost as-btn--sm" onClick={handleDeselectAllFiltered}>
-                        Clear Filtered
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Search and Dept Filter Bar */}
-                  <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.65rem', flexWrap: 'wrap' }}>
-                    <div className="as-search" style={{ flex: 1, minWidth: '180px' }}>
-                      <Search size={14} />
-                      <input
-                        type="text"
-                        className="as-input"
-                        placeholder="Search employee name, email, department..."
-                        value={employeeSearch}
-                        onChange={(e) => setEmployeeSearch(e.target.value)}
-                      />
-                    </div>
-                    <select
-                      className="as-select as-select--auto"
-                      value={selectedDeptFilter}
-                      onChange={(e) => setSelectedDeptFilter(e.target.value)}
-                    >
-                      <option value="All">All Departments</option>
-                      {departments.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Employee Chip Grid */}
-                  <div className="cc-user-grid">
-                    {filteredEmployees.map((emp) => {
-                      const isChecked = assignedUserEmails.includes(emp.email);
-                      return (
-                        <label key={emp.email} className={`cc-user-chip ${isChecked ? 'checked' : ''}`}>
-                          <input
-                            type="checkbox"
-                            style={{ width: '15px', height: '15px', accentColor: 'var(--as-primary)', cursor: 'pointer' }}
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setAssignedUserEmails((prev) => [...prev, emp.email]);
-                              } else {
-                                setAssignedUserEmails((prev) => prev.filter((email) => email !== emp.email));
-                              }
-                            }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                              {emp.name}
-                            </div>
-                            <div className="as-muted" style={{ fontSize: '0.72rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                              {emp.email} {emp.department ? `· ${emp.department}` : ''}
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                    {filteredEmployees.length === 0 && (
-                      <div className="as-empty-state" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-                        No employees match search filter.
-                      </div>
-                    )}
-                  </div>
+                  <strong>{isUploading ? 'Uploading...' : 'Drop files or browse'}</strong>
+                  <span>PDF, MP4, DOCX, XLSX, ZIP</span>
                 </div>
               </div>
-            </div>
+              {attachments.length === 0 ? (
+                <p className="cc-muted cc-note">No reference files yet. Handbooks and guides are optional.</p>
+              ) : (
+                <ul className="cc-files">
+                  {attachments.map((f, i) => {
+                    const b = getFileBadge(f.name);
+                    return (
+                      <li key={i}>
+                        <span className="cc-ft" style={{ background: b.bg, color: b.color }}>{b.label}</span>
+                        <div><strong title={f.name}>{f.name}</strong><span>{(f.size / 1024).toFixed(1)} KB</span></div>
+                        {f.url && <a href={f.url} target="_blank" rel="noreferrer" className="cc-ico" title="Open"><Eye size={13} /></a>}
+                        <button type="button" className="cc-ico danger" onClick={() => removeAttachment(i)} title="Remove"><Trash2 size={13} /></button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
 
-            {/* SECTION 4: REVIEW & PUBLISH */}
-            <div
-              className="cc-section"
-              data-section-id="review"
-              ref={(el) => {
-                sectionRefs.current.review = el;
-              }}
-            >
-              <div className="cc-section-header">
-                <h2>
-                  <ClipboardList size={18} style={{ color: 'var(--as-primary)' }} /> Review & Live Catalog Preview
-                </h2>
-                <span className="sub">Pre-flight checklist and catalog view</span>
+            <section className="cc-card">
+              <div className="cc-card-h between">
+                <span><Users size={14} /> Assign employees</span>
+                <em className="cc-tag ok">{assignedUserEmails.length} enrolled · {employees.length ? Math.round((assignedCount / employees.length) * 100) : 0}%</em>
               </div>
 
-              <div className="as-split-2" style={{ gap: '1.2rem' }}>
-                {/* PRE-FLIGHT CHECKLIST CARD */}
-                <div className="cc-preflight-card">
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--as-ink)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <CheckCircle2 size={18} style={{ color: readinessChecklist.percent === 100 ? 'var(--as-good)' : 'var(--as-primary)' }} />
-                    Publish Readiness Checklist ({readinessChecklist.completed}/{readinessChecklist.total})
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                    {readinessChecklist.items.map((item) => (
-                      <div key={item.id} className="cc-preflight-item">
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                          {item.ok ? (
-                            <CheckCircle2 size={15} style={{ color: 'var(--as-good)' }} />
-                          ) : (
-                            <AlertCircle size={15} style={{ color: 'var(--as-warn)' }} />
-                          )}
-                          <span style={{ fontWeight: item.ok ? 600 : 500, color: item.ok ? 'var(--as-ink)' : 'var(--as-warn)' }}>
-                            {item.label}
-                          </span>
-                        </span>
-
-                        {!item.ok && (
-                          <button
-                            type="button"
-                            className="as-btn as-btn--ghost as-btn--sm"
-                            style={{ height: '22px', fontSize: '0.72rem', color: 'var(--as-primary)' }}
-                            onClick={() => scrollToSection(item.targetSection)}
-                          >
-                            Fix item →
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.4rem' }}>
-                    {editingCourseId && (
-                      <button type="button" className="as-btn as-btn--outline as-btn--full" onClick={resetCourseFormState}>
-                        Cancel Edit
-                      </button>
-                    )}
-                    <button type="submit" disabled={isUploading} className="as-btn as-btn--primary as-btn--full">
-                      {isUploading ? (
-                        <>
-                          <RefreshCw size={15} style={{ animation: 'spin 1.2s linear infinite' }} /> Uploading...
-                        </>
-                      ) : (
-                        <>
-                          {editingCourseId ? <Check size={16} /> : <Zap size={16} />}
-                          {editingCourseId ? 'Save Content Track' : 'Publish Content Track'}
-                        </>
-                      )}
-                    </button>
-                  </div>
+              <div className="cc-row wrap between">
+                <div className="cc-pills">
+                  {([['all', `All ${employees.length}`], ['assigned', `Enrolled ${assignedCount}`], ['unassigned', `Open ${employees.length - assignedCount}`]] as const).map(([k, l]) => (
+                    <button key={k} type="button" className={assignTab === k ? 'on' : ''} onClick={() => setAssignTab(k)}>{l}</button>
+                  ))}
                 </div>
-
-                {/* LIVE CATALOG CARD PREVIEW */}
-                <div>
-                  <div className="as-label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Eye size={15} style={{ color: 'var(--as-primary)' }} /> Live Course Catalog Card Preview
-                  </div>
-                  <CourseCard course={previewCourse} variant="trainer" />
+                <div className="cc-row">
+                  <button type="button" className="cc-btn sm" onClick={selectFiltered}>Select {filtered.length}</button>
+                  <button type="button" className="cc-btn sm danger" onClick={clearFiltered}>Clear</button>
                 </div>
               </div>
+
+              <div className="cc-row">
+                <div className="cc-search grow">
+                  <Search size={14} />
+                  <input className="cc-in" placeholder="Search name, email, department..." value={employeeSearch} onChange={(e) => setEmployeeSearch(e.target.value)} />
+                  {employeeSearch && <button type="button" onClick={() => setEmployeeSearch('')}><X size={13} /></button>}
+                </div>
+                <select className="cc-in cc-w-dept" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+                  <option value="All">All departments</option>
+                  {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+
+              <div className="cc-people">
+                {filtered.map((emp) => {
+                  const on = assignedUserEmails.includes(emp.email);
+                  return (
+                    <label key={emp.email} className={`cc-person ${on ? 'on' : ''}`}>
+                      <input type="checkbox" checked={on}
+                        onChange={(e) => setAssignedUserEmails((p) => (e.target.checked ? [...p, emp.email] : p.filter((x) => x !== emp.email)))} />
+                      <span className="cc-av" style={{ background: avatarColor(emp.name) }}>{getInitials(emp.name)}</span>
+                      <div><strong>{emp.name}</strong><span>{emp.department ? `${emp.department} · ` : ''}{emp.email}</span></div>
+                    </label>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <div className="cc-empty-box">
+                    <Users size={20} />
+                    <span>No employees match these filters.</span>
+                    <button type="button" className="cc-btn sm" onClick={() => { setEmployeeSearch(''); setDeptFilter('All'); setAssignTab('all'); }}>Reset filters</button>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ===== REVIEW ===== */}
+        {tab === 'review' && (
+          <div className="cc-grid-review">
+            <section className="cc-card">
+              <div className="cc-card-h">
+                <CheckCircle2 size={14} /> Publish checklist ({readiness.completed}/{readiness.total})
+              </div>
+              <ul className="cc-check">
+                {readiness.items.map((it) => (
+                  <li key={it.id} className={it.ok ? 'ok' : ''}>
+                    {it.ok ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+                    <span>{it.label}</span>
+                    {!it.ok && <button type="button" className="cc-link" onClick={() => setTab(it.tab)}>Fix</button>}
+                  </li>
+                ))}
+              </ul>
+              <div className="cc-row">
+                {editingCourseId && <button type="button" className="cc-btn grow" onClick={resetCourseFormState}>Cancel edit</button>}
+                <button type="submit" disabled={isUploading} className="cc-btn primary grow">
+                  {editingCourseId ? <Check size={14} /> : <Zap size={14} />} {editingCourseId ? 'Save changes' : 'Publish'}
+                </button>
+              </div>
+            </section>
+            <div>
+              <div className="cc-card-h cc-plain"><Eye size={14} /> Catalog card preview</div>
+              <CourseCard course={previewCourse} variant="trainer" />
             </div>
           </div>
-        </div>
+        )}
 
-        {/* STICKY SAVE BAR FOR MOBILE */}
         <div className="as-sticky-save">
-          <button type="submit" disabled={isUploading} className="as-btn as-btn--primary as-btn--full" style={{ borderRadius: 0, height: '46px' }}>
-            <Zap size={16} />
-            {isUploading ? 'Uploading Files...' : editingCourseId ? 'Save Changes' : 'Publish Course Track'}
+          <button type="submit" disabled={isUploading} className="as-btn as-btn--primary as-btn--full" style={{ borderRadius: 0, height: 46 }}>
+            <Zap size={16} /> {isUploading ? 'Uploading...' : editingCourseId ? 'Save changes' : 'Publish'}
           </button>
         </div>
       </form>
 
-      {/* VIDEO PREVIEW MODAL */}
-      {activeVideoModal && (
-        <div className="cc-video-modal-backdrop" onClick={() => setActiveVideoModal(null)}>
-          <div className="cc-video-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: '0.65rem 1rem', background: '#1e293b', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Play size={14} style={{ color: '#059669' }} /> Video Stream Preview
-              </span>
-              <button
-                type="button"
-                className="as-icon-btn"
-                style={{ color: '#fff' }}
-                onClick={() => setActiveVideoModal(null)}
-              >
-                <X size={16} />
-              </button>
+      {videoModal && (
+        <div className="cc-modal" onClick={() => setVideoModal(null)}>
+          <div className="cc-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="cc-modal-h">
+              <span><Play size={13} /> Video preview</span>
+              <button type="button" onClick={() => setVideoModal(null)} aria-label="Close"><X size={16} /></button>
             </div>
-            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-              <iframe
-                src={getEmbedUrl(activeVideoModal) || activeVideoModal}
-                title="Lesson Video Stream"
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+            <div className="cc-ratio">
+              <iframe src={getEmbedUrl(videoModal)} title="Lesson video" allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
             </div>
           </div>
         </div>
@@ -2104,3 +827,170 @@ export const ContentCreatorView: React.FC<ContentCreatorViewProps> = ({
     </div>
   );
 };
+
+const CSS = `
+.cc{--p:var(--as-primary,#a31555);--ps:var(--as-primary-soft,#fdf2f8);--ln:var(--as-line,#e5e9f0);--ink:var(--as-ink,#0f172a);--mu:#64748b;--good:var(--as-good,#16a34a);--warn:var(--as-warn,#d97706);
+  font-family:Inter,system-ui,-apple-system,sans-serif;font-size:13px;color:var(--ink);padding-bottom:3rem}
+.cc *{box-sizing:border-box}
+.cc button{font-family:inherit;cursor:pointer}
+.cc button:disabled{opacity:.4;cursor:not-allowed}
+.cc :focus-visible{outline:2px solid var(--p);outline-offset:1px}
+
+/* toolbar */
+.cc-bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:.9rem;padding:.5rem .75rem;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--ln);border-radius:12px;margin-bottom:.9rem;flex-wrap:wrap}
+.cc-bar-title{display:flex;align-items:center;gap:.6rem;min-width:0;flex:1 1 200px}
+.cc-bar-icon{width:30px;height:30px;border-radius:8px;background:var(--ps);color:var(--p);display:grid;place-items:center;flex-shrink:0}
+.cc-bar-text{display:flex;flex-direction:column;min-width:0}
+.cc-bar-text strong{font-size:13.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-bar-text span{font-size:11px;color:var(--mu)}
+.cc-tabs{display:flex;gap:2px;background:#f1f5f9;padding:3px;border-radius:9px}
+.cc-tab{display:inline-flex;align-items:center;gap:.35rem;border:0;background:transparent;color:var(--mu);font-size:12px;font-weight:550;padding:.38rem .7rem;border-radius:7px;white-space:nowrap}
+.cc-tab:hover{color:var(--ink)}
+.cc-tab.on{background:#fff;color:var(--p);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+.cc-tab-ok{color:var(--good)}
+.cc-bar-actions{display:flex;align-items:center;gap:.4rem;margin-left:auto}
+.cc-meter{display:flex;align-items:center;gap:.4rem;font-size:11px;font-weight:650;color:var(--mu);margin-right:.2rem}
+.cc-meter-track{width:56px;height:5px;background:#e8edf3;border-radius:9px;overflow:hidden}
+.cc-meter-track div{height:100%;background:var(--p);border-radius:9px;transition:width .25s}
+.cc-meter-track div.full{background:var(--good)}
+@media(max-width:900px){.cc-tabs{order:3;width:100%;overflow-x:auto}.cc-tab span{display:inline}.cc-bar-actions{margin-left:0}}
+
+/* buttons */
+.cc-btn{display:inline-flex;align-items:center;gap:.35rem;height:30px;padding:0 .7rem;border-radius:8px;border:1px solid var(--ln);background:#fff;color:var(--ink);font-size:12px;font-weight:600;white-space:nowrap}
+.cc-btn:hover:not(:disabled){background:#f8fafc;border-color:#cbd5e1}
+.cc-btn.sm{height:26px;padding:0 .55rem;font-size:11.5px}
+.cc-btn.ghost{border-color:transparent;background:transparent;color:var(--mu)}
+.cc-btn.primary{background:var(--p);border-color:var(--p);color:#fff}
+.cc-btn.primary:hover:not(:disabled){filter:brightness(1.08);background:var(--p)}
+.cc-btn.danger{color:#dc2626}
+.cc-btn.grow{flex:1;justify-content:center}
+.cc-ico{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;border:0;background:transparent;color:var(--mu)}
+.cc-ico:hover:not(:disabled){background:#f1f5f9;color:var(--ink)}
+.cc-ico.danger:hover:not(:disabled){background:#fef2f2;color:#dc2626}
+.cc-link{border:0;background:none;color:var(--p);font-size:11.5px;font-weight:600;padding:0;display:inline-flex;align-items:center;gap:.2rem}
+.cc-spin{animation:cc-spin 1.1s linear infinite}
+@keyframes cc-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.cc-spin{animation:none}}
+
+/* layout */
+.cc-grid-main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:.9rem;align-items:start}
+.cc-grid-access{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:.9rem;align-items:start}
+.cc-grid-review{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.9rem;align-items:start}
+@media(max-width:900px){.cc-grid-main,.cc-grid-access,.cc-grid-review{grid-template-columns:1fr}}
+.cc-side{position:sticky;top:64px}
+@media(max-width:900px){.cc-side{position:static}}
+.cc-stack{display:flex;flex-direction:column;gap:.7rem}
+.cc-stack.tight{gap:.5rem}
+.cc-card{background:#fff;border:1px solid var(--ln);border-radius:12px;padding:.85rem;display:flex;flex-direction:column;gap:.7rem;min-width:0}
+.cc-card-h{display:flex;align-items:center;gap:.4rem;font-size:12.5px;font-weight:650}
+.cc-card-h>span{display:inline-flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.cc-card-h.between{justify-content:space-between}
+.cc-card-h svg{color:var(--p)}
+.cc-plain{background:none;border:0;padding:0}
+.cc-row{display:flex;align-items:center;gap:.4rem}
+.cc-row.wrap{flex-wrap:wrap}.cc-row.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.cc-between{display:flex;justify-content:space-between;align-items:center}
+.cc-muted{color:var(--mu)}
+.cc-note{font-size:12px;margin:0;padding:.7rem;background:#f8fafc;border-radius:8px;text-align:center}
+.cc-tag{font-style:normal;font-size:10.5px;font-weight:650;padding:.1rem .45rem;border-radius:99px;background:#f1f5f9;color:var(--mu)}
+.cc-tag.warn{background:#fff7ed;color:var(--warn)}.cc-tag.ok{background:#f0fdf4;color:var(--good)}
+.cc-badge{font-size:10.5px;font-weight:750;padding:.15rem .4rem;border-radius:6px;background:var(--p);color:#fff;white-space:nowrap}
+.cc-badge.soft{background:var(--ps);color:var(--p)}.cc-badge.warn{background:#fff7ed;color:var(--warn)}
+
+/* form */
+.cc-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem}
+.cc-f{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.cc-f.span2,.cc-fields .span2{grid-column:1/-1}
+.cc-f>span{font-size:11.5px;font-weight:600;color:#475569}
+.cc-f em{font-size:11px;color:var(--mu);font-style:normal}
+.cc-in{width:100%;height:32px;padding:0 .6rem;border:1px solid var(--ln);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px}
+textarea.cc-in{height:auto;padding:.5rem .6rem;line-height:1.5;resize:vertical}
+.cc-in:hover{border-color:#cbd5e1}.cc-in:focus{border-color:var(--p);outline:0;box-shadow:0 0 0 3px var(--ps)}
+.cc-title-in{font-weight:650;height:30px}
+.cc-w-type{width:150px;flex-shrink:0}.cc-w-dept{width:160px;flex-shrink:0}
+.cc-seg{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#f1f5f9;padding:3px;border-radius:9px}
+.cc-seg button{display:flex;align-items:center;justify-content:center;gap:.4rem;border:0;background:transparent;border-radius:7px;padding:.45rem;font-size:12px;font-weight:600;color:var(--mu)}
+.cc-seg button.on{background:#fff;color:var(--p);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+.cc-switch{display:flex;align-items:center;gap:.5rem;padding:.55rem .7rem;border:1px solid var(--ln);border-radius:9px;background:#f8fafc;font-size:12.5px;font-weight:600;cursor:pointer}
+.cc-switch input{accent-color:var(--p);width:15px;height:15px}.cc-switch svg{color:var(--p)}
+
+/* cover */
+.cc-cover{position:relative;height:120px;border-radius:9px;overflow:hidden;background:#0f172a}
+.cc-cover img{width:100%;height:100%;object-fit:cover}
+.cc-cover-actions{position:absolute;right:6px;bottom:6px;display:flex;gap:4px}
+.cc-drop{position:relative;display:flex;align-items:center;gap:.65rem;padding:.7rem .8rem;border:1.5px dashed #cbd5e1;border-radius:10px;background:#f8fafc;color:var(--mu);cursor:pointer}
+.cc-drop:hover,.cc-drop.drag{border-color:var(--p);background:var(--ps);color:var(--p)}
+.cc-drop div{display:flex;flex-direction:column;line-height:1.35}
+.cc-drop strong{font-size:12px;color:var(--ink)}.cc-drop span{font-size:11px;color:var(--mu)}
+.cc-drop.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.cc-chips{display:flex;gap:.35rem}
+.cc-chip{width:24px;height:24px;border-radius:7px;border:2px solid transparent;display:grid;place-items:center;color:#fff}
+.cc-chip.on{border-color:var(--ink)}
+
+/* modules */
+.cc-module{border-left:3px solid var(--p)}
+.cc-module-h{display:flex;align-items:center;gap:.45rem}
+.cc-count{font-size:11px;font-weight:650;color:var(--mu);background:#f1f5f9;border-radius:99px;padding:.1rem .45rem}
+.cc-lessons{display:flex;flex-direction:column;gap:.35rem}
+.cc-lesson{border:1px solid var(--ln);border-radius:9px;overflow:hidden}
+.cc-lesson.open{border-color:#cbd5e1}
+.cc-lesson-h{display:flex;align-items:center;gap:.5rem;padding:.35rem .55rem;cursor:pointer;background:#f8fafc;color:var(--mu)}
+.cc-lesson-h:hover{background:#f1f5f9}
+.cc-lesson-t{flex:1;min-width:0;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-vid{display:inline-flex;align-items:center;gap:.2rem;font-size:11px;color:#059669}
+.cc-lesson-a{display:flex;gap:0}
+.cc-lesson-b{padding:.7rem;border-top:1px solid var(--ln)}
+.cc-empty{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.7rem;border:1.5px dashed #cbd5e1;border-radius:9px;background:#f8fafc;color:var(--mu);font-size:12px;font-weight:600}
+.cc-empty:hover{border-color:var(--p);color:var(--p)}
+.cc-reader{padding:.9rem;border:1px solid var(--ln);border-radius:9px;min-height:200px;white-space:pre-wrap;line-height:1.6;font-size:13px}
+
+/* quiz */
+.cc-q{border:1px solid var(--ln);border-radius:9px;padding:.6rem;display:flex;flex-direction:column;gap:.5rem;background:#fcfdfe}
+.cc-q-t{font-weight:650;font-size:12.5px}
+.cc-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.4rem}
+.cc-optrow{display:flex;align-items:center;gap:.4rem;padding:.25rem;border:1px solid var(--ln);border-radius:9px;background:#fff}
+.cc-optrow.ok{border-color:var(--good);background:#f0fdf4}
+.cc-optrow button{width:22px;height:22px;border-radius:50%;border:0;background:#cbd5e1;color:#fff;font-size:11px;font-weight:750;flex-shrink:0}
+.cc-optrow.ok button{background:var(--good)}
+.cc-optrow .cc-in{height:28px;border-color:transparent;background:transparent}
+.cc-opt{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .7rem;border:1px solid var(--ln);border-radius:8px;background:#fff;font-size:12px;font-weight:550}
+.cc-opt.ok{border-color:var(--good);background:#f0fdf4;color:#166534}
+.cc-opt.bad{border-color:#dc2626;background:#fef2f2;color:#991b1b}
+
+/* people & files */
+.cc-pills{display:flex;background:#f1f5f9;padding:2px;border-radius:8px}
+.cc-pills button{border:0;background:transparent;padding:.2rem .55rem;border-radius:6px;font-size:11.5px;font-weight:600;color:var(--mu)}
+.cc-pills button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+.cc-search{position:relative;display:flex;align-items:center}
+.cc-search>svg{position:absolute;left:9px;color:var(--mu)}
+.cc-search .cc-in{padding-left:28px;padding-right:26px}
+.cc-search button{position:absolute;right:6px;border:0;background:none;color:var(--mu);display:grid}
+.cc-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.4rem;max-height:340px;overflow-y:auto;padding:2px}
+.cc-person{display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem;border:1px solid var(--ln);border-radius:9px;cursor:pointer;background:#fff;min-width:0}
+.cc-person:hover{border-color:#cbd5e1}.cc-person.on{border-color:var(--p);background:var(--ps)}
+.cc-person input{accent-color:var(--p);width:14px;height:14px;flex-shrink:0}
+.cc-av{width:26px;height:26px;border-radius:50%;color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex-shrink:0}
+.cc-person div,.cc-files div{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.3}
+.cc-person strong,.cc-files strong{font-size:12px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-person span,.cc-files span{font-size:10.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-empty-box{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:.4rem;padding:1.2rem;color:var(--mu);background:#f8fafc;border:1px dashed #cbd5e1;border-radius:9px}
+.cc-files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem}
+.cc-files li{display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem;border:1px solid var(--ln);border-radius:9px}
+.cc-ft{font-size:10px;font-weight:800;padding:.2rem .35rem;border-radius:5px;flex-shrink:0}
+
+/* review */
+.cc-check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.3rem}
+.cc-check li{display:flex;align-items:center;gap:.5rem;padding:.45rem .6rem;border:1px solid var(--ln);border-radius:8px;color:var(--warn);font-weight:550}
+.cc-check li span{flex:1}
+.cc-check li.ok{color:var(--ink)}.cc-check li.ok svg{color:var(--good)}
+
+/* modal */
+.cc-modal{position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.7);display:grid;place-items:center;padding:1rem}
+.cc-modal-box{width:100%;max-width:760px;background:#000;border-radius:12px;overflow:hidden}
+.cc-modal-h{display:flex;justify-content:space-between;align-items:center;padding:.5rem .8rem;background:#1e293b;color:#fff;font-size:12.5px;font-weight:650}
+.cc-modal-h span{display:inline-flex;align-items:center;gap:.4rem}
+.cc-modal-h button{border:0;background:none;color:#fff;display:grid}
+.cc-ratio{position:relative;padding-bottom:56.25%;height:0}
+.cc-ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+`;

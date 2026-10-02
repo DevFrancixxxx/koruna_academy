@@ -7,12 +7,15 @@ import { CertificateView } from '../CertificateView';
 interface QuizViewerProps {
   studyingCourse: Course;
   quizAnswers: Record<number, number>;
+  quizTextAnswers?: Record<number, string>;
   handleQuizAnswer: (questionIdx: number, optionIdx: number) => void;
+  handleQuizTextAnswer?: (questionIdx: number, text: string) => void;
   quizSubmitted: boolean;
   handleQuizSubmit: () => void;
   quizPassed: boolean;
   quizScore: number;
   setQuizAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  setQuizTextAnswers?: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   setQuizSubmitted: React.Dispatch<React.SetStateAction<boolean>>;
   settings: SystemSettings;
   setActiveLessonIdx: React.Dispatch<React.SetStateAction<number>>;
@@ -38,12 +41,15 @@ function formatTime(seconds: number): string {
 export const QuizViewer: React.FC<QuizViewerProps> = ({
   studyingCourse,
   quizAnswers,
+  quizTextAnswers = {},
   handleQuizAnswer,
+  handleQuizTextAnswer,
   quizSubmitted,
   handleQuizSubmit,
   quizPassed,
   quizScore,
   setQuizAnswers,
+  setQuizTextAnswers,
   setQuizSubmitted,
   settings,
   setActiveLessonIdx,
@@ -89,6 +95,7 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
 
   const handleRetake = () => {
     setQuizAnswers({});
+    if (setQuizTextAnswers) setQuizTextAnswers({});
     setQuizSubmitted(false);
     setCurrentQ(0);
     setTimeLeft(totalSeconds);
@@ -485,74 +492,159 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
           </h2>
         </div>
 
-        {/* Answer Option Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          {q.options.map((opt, optIdx) => {
-            const isSelected = selectedOpt === optIdx;
-            const label = OPTION_LABELS[optIdx] ?? String(optIdx + 1);
+        {/* Answer Options Rendering Based on Question Type */}
+        {(() => {
+          const qType = q.type || (q.options?.length === 2 && (q.options[0]?.toLowerCase() === 'true') ? 'true_false' : (!q.options || q.options.length === 0 || q.answerText) ? 'short_answer' : 'multiple_choice');
 
+          if (qType === 'short_answer') {
             return (
-              <button
-                key={optIdx}
-                id={`quiz-q${currentQ}-opt${optIdx}`}
-                onClick={() => handleQuizAnswer(currentQ, optIdx)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1.25rem',
-                  padding: '1.15rem 1.5rem',
-                  borderRadius: '16px',
-                  width: '100%',
-                  border: isSelected ? '2px solid #b8235a' : '1px solid #e5e7eb',
-                  background: '#ffffff',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isSelected ? '0 4px 14px rgba(184,35,90,0.08)' : '0 1px 3px rgba(0,0,0,0.02)'
-                }}
-                onMouseEnter={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.transform = 'none';
-                  }
-                }}
-              >
-                {/* Option Letter Circle Badge */}
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  background: isSelected ? '#b8235a' : '#ffffff',
-                  color: isSelected ? '#ffffff' : '#6b7280',
-                  border: isSelected ? 'none' : '1px solid #e5e7eb',
-                  transition: 'all 0.15s ease'
-                }}>
-                  {label}
-                </div>
-
-                <span style={{
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
-                  color: '#111827'
-                }}>
-                  {opt}
-                </span>
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>
+                  Your Answer (Text Response):
+                </label>
+                <textarea
+                  style={{
+                    width: '100%',
+                    minHeight: '110px',
+                    padding: '1rem 1.2rem',
+                    borderRadius: '16px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.95rem',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.03)'
+                  }}
+                  placeholder="Type your answer text response here..."
+                  value={quizTextAnswers[currentQ] || ''}
+                  onChange={(e) => handleQuizTextAnswer && handleQuizTextAnswer(currentQ, e.target.value)}
+                />
+              </div>
             );
-          })}
-        </div>
+          }
+
+          if (qType === 'true_false') {
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => handleQuizAnswer(currentQ, 0)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.75rem',
+                    padding: '1.25rem',
+                    borderRadius: '16px',
+                    border: selectedOpt === 0 ? '2px solid #16a34a' : '1px solid #e5e7eb',
+                    background: selectedOpt === 0 ? '#f0fdf4' : '#ffffff',
+                    color: selectedOpt === 0 ? '#15803d' : '#1e293b',
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: selectedOpt === 0 ? '0 4px 14px rgba(22, 163, 74, 0.12)' : '0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <CheckCircle2 size={24} style={{ color: selectedOpt === 0 ? '#16a34a' : '#94a3b8' }} />
+                  <span>True</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuizAnswer(currentQ, 1)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.75rem',
+                    padding: '1.25rem',
+                    borderRadius: '16px',
+                    border: selectedOpt === 1 ? '2px solid #dc2626' : '1px solid #e5e7eb',
+                    background: selectedOpt === 1 ? '#fef2f2' : '#ffffff',
+                    color: selectedOpt === 1 ? '#b91c1c' : '#1e293b',
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: selectedOpt === 1 ? '0 4px 14px rgba(220, 38, 38, 0.12)' : '0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <AlertTriangle size={24} style={{ color: selectedOpt === 1 ? '#dc2626' : '#94a3b8' }} />
+                  <span>False</span>
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {q.options.map((opt, optIdx) => {
+                const isSelected = selectedOpt === optIdx;
+                const label = OPTION_LABELS[optIdx] ?? String(optIdx + 1);
+
+                return (
+                  <button
+                    key={optIdx}
+                    id={`quiz-q${currentQ}-opt${optIdx}`}
+                    onClick={() => handleQuizAnswer(currentQ, optIdx)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1.25rem',
+                      padding: '1.15rem 1.5rem',
+                      borderRadius: '16px',
+                      width: '100%',
+                      border: isSelected ? '2px solid #b8235a' : '1px solid #e5e7eb',
+                      background: '#ffffff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 4px 14px rgba(184,35,90,0.08)' : '0 1px 3px rgba(0,0,0,0.02)'
+                    }}
+                    onMouseEnter={e => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.transform = 'none';
+                      }
+                    }}
+                  >
+                    {/* Option Letter Circle Badge */}
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                      fontSize: '0.875rem',
+                      background: isSelected ? '#b8235a' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#6b7280',
+                      border: isSelected ? 'none' : '1px solid #e5e7eb',
+                      transition: 'all 0.15s ease'
+                    }}>
+                      {label}
+                    </div>
+
+                    <span style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      color: '#111827'
+                    }}>
+                      {opt}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* ── Footer Navigation Buttons ── */}
         <div style={{
