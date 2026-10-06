@@ -21,10 +21,9 @@ import { UserDirectoryView } from './UserDirectoryView';
 import { PermissionsMatrixView } from './PermissionsMatrixView';
 import { PlatformSettingsView } from './PlatformSettingsView';
 import { CourseCard } from '../courses/CourseCard';
-
 interface AdminSuiteProps {
   userSession: UserSessionData;
-  userPerms: RolePermissions['permissions'];
+  userPerms?: RolePermissions['permissions'];
   courses: Course[];
   users: DatabaseUser[];
   departments: Department[];
@@ -37,6 +36,8 @@ interface AdminSuiteProps {
   setEditingCourseId: (id: string | null) => void;
   assignedUserEmails: string[];
   setAssignedUserEmails: React.Dispatch<React.SetStateAction<string[]>>;
+  assignmentDueDate: string;
+  setAssignmentDueDate: React.Dispatch<React.SetStateAction<string>>;
   courseForm: any;
   setCourseForm: React.Dispatch<React.SetStateAction<any>>;
   courseLessons: any[];
@@ -265,6 +266,8 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
   setEditingCourseId,
   assignedUserEmails,
   setAssignedUserEmails,
+  assignmentDueDate,
+  setAssignmentDueDate,
   courseForm,
   setCourseForm,
   courseLessons,
@@ -314,6 +317,7 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
   const totalHours = dbService.getProgressList().reduce((sum, p) => sum + (p.learningHours || 0), 0);
 
   const resetCourseFormState = () => {
+    const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     setEditingCourseId(null);
     setCourseForm({
       title: '',
@@ -332,6 +336,8 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
     });
     setCourseLessons([{ id: 'c_new-l1', title: 'Lesson 1: Introduction', content: 'Enter lesson text here.', moduleId: 'm1', moduleTitle: 'Introduction' }]);
     setCourseQuiz([]);
+    setAssignedUserEmails([]);
+    setAssignmentDueDate(defaultDueDate);
   };
 
   const meta = PAGE_META[activeInnerTab];
@@ -411,6 +417,8 @@ export const AdminSuite: React.FC<AdminSuiteProps> = ({
           users={users}
           assignedUserEmails={assignedUserEmails}
           setAssignedUserEmails={setAssignedUserEmails}
+          assignmentDueDate={assignmentDueDate}
+          setAssignmentDueDate={setAssignmentDueDate}
           courseForm={courseForm}
           setCourseForm={setCourseForm}
           courseLessons={courseLessons}

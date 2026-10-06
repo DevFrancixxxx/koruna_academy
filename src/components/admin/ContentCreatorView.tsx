@@ -16,6 +16,8 @@ export interface ContentCreatorViewProps {
   users: DatabaseUser[];
   assignedUserEmails: string[];
   setAssignedUserEmails: React.Dispatch<React.SetStateAction<string[]>>;
+  assignmentDueDate: string;
+  setAssignmentDueDate: React.Dispatch<React.SetStateAction<string>>;
   courseForm: {
     title: string;
     category: string;
@@ -105,6 +107,7 @@ const getEmbedUrl = (url: string) => {
 
 export const ContentCreatorView: React.FC<ContentCreatorViewProps> = ({
   userSession, editingCourseId, courses, users, assignedUserEmails, setAssignedUserEmails,
+  assignmentDueDate, setAssignmentDueDate,
   courseForm, setCourseForm, courseLessons, setCourseLessons, courseQuiz, setCourseQuiz,
   courseModules, setCourseModules, handleSaveCourse, resetCourseFormState, onOpenInventoryModal,
   addQuizQuestionField, removeQuizQuestionField, showToast
@@ -268,11 +271,12 @@ export const ContentCreatorView: React.FC<ContentCreatorViewProps> = ({
       { id: 'desc', label: 'Description', ok: descOk, tab: 'details' },
       { id: 'content', label: isDocument ? 'Document body' : 'Lessons & modules', ok: contentOk, tab: 'content' },
       { id: 'assess', label: isDocument ? 'Acknowledgment statement' : courseQuiz.length ? 'Knowledge check quiz' : 'Quiz (optional)', ok: assessOk, tab: 'content' },
-      { id: 'access', label: 'Assigned employees', ok: assignedUserEmails.length > 0, tab: 'access' }
+      { id: 'access', label: 'Assigned employees', ok: assignedUserEmails.length > 0, tab: 'access' },
+      { id: 'deadline', label: 'Assignment deadline', ok: assignedUserEmails.length === 0 || !!assignmentDueDate, tab: 'access' }
     ];
     const completed = items.filter((i) => i.ok).length;
     return { items, completed, total: items.length, percent: Math.round((completed / items.length) * 100) };
-  }, [courseForm, isDocument, courseLessons, courseQuiz, assignedUserEmails]);
+  }, [courseForm, isDocument, courseLessons, courseQuiz, assignedUserEmails, assignmentDueDate]);
 
   const tabDone = (id: TabId) =>
     id === 'details' ? !!courseForm.title.trim() && !!courseForm.code.trim()
@@ -736,6 +740,18 @@ export const ContentCreatorView: React.FC<ContentCreatorViewProps> = ({
                   <button type="button" className="cc-btn sm danger" onClick={clearFiltered}>Clear</button>
                 </div>
               </div>
+
+              <label className="cc-f">
+                <span>Assignment deadline</span>
+                <input
+                  type="date"
+                  className="cc-in"
+                  value={assignmentDueDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setAssignmentDueDate(e.target.value)}
+                />
+                <em>Assigned employees must complete this by the selected date.</em>
+              </label>
 
               <div className="cc-row">
                 <div className="cc-search grow">

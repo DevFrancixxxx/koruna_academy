@@ -141,35 +141,19 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
 
     if (quizPassed && studyingCourse.requiresCertification === false) {
       return (
-        <div style={{
-          background: '#ffffff',
-          border: '1px solid var(--koruna-border-color)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: 'var(--koruna-card-shadow)'
-        }}>
+        <div className="koruna-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="quiz-complete-title">
           <div style={{
-            background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-            padding: '1.25rem 2rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <span style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CheckCircle2 size={18} /> Course &amp; Quiz Completed
-            </span>
-            <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 10px', borderRadius: '12px', color: '#ffffff', fontSize: '0.75rem', fontWeight: 600 }}>
-              No Certificate Course
-            </span>
-          </div>
-
-          <div style={{
-            padding: '2.5rem 2rem',
+            width: 'min(560px, calc(100vw - 2rem))',
+            background: '#ffffff',
+            border: '1px solid var(--koruna-border-color)',
+            borderRadius: '16px',
+            boxShadow: '0 24px 60px rgba(15, 23, 42, 0.24)',
+            padding: '2rem',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             textAlign: 'center',
-            gap: '1.25rem'
+            gap: '1.15rem'
           }}>
             <div style={{
               background: '#dcfce7',
@@ -185,11 +169,11 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
             </div>
 
             <div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#14532d', margin: '0 0 0.35rem 0' }}>
-                Assessment Passed &amp; Course Completed!
+              <h3 id="quiz-complete-title" style={{ fontSize: '1.5rem', fontWeight: 800, color: '#14532d', margin: '0 0 0.35rem 0' }}>
+                Congratulations!
               </h3>
               <p style={{ color: '#166534', fontSize: '0.9rem', maxWidth: '520px', margin: '0 auto', lineHeight: 1.5 }}>
-                Congratulations! You scored <strong>{quizScore}%</strong> on the assessment quiz. All quiz answers and course lessons have been completed.
+                You scored <strong>{quizScore}%</strong> on the assessment quiz and completed <strong>{studyingCourse.title}</strong>.
               </p>
             </div>
 
@@ -234,7 +218,7 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
                   boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)'
                 }}
               >
-                <CheckCircle2 size={16} /> Finish &amp; Return to Dashboard
+                <CheckCircle2 size={16} /> Return to Dashboard
               </button>
             </div>
           </div>
@@ -740,4 +724,3 @@ export const QuizViewer: React.FC<QuizViewerProps> = ({
     </div>
   );
 };
-

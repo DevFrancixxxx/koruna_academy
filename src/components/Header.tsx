@@ -110,6 +110,14 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   const viewMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const handleNotificationsToggle = () => {
+    const nextShowNotifications = !showNotifications;
+    setShowNotifications(nextShowNotifications);
+
+    if (nextShowNotifications && unreadCount > 0) {
+      void onMarkAllNotificationsAsRead();
+    }
+  };
 
   // Close dropdowns when clicking outside, or on Escape.
   useEffect(() => {
@@ -183,7 +191,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
       <div style={{ position: 'relative' }} ref={notificationsMenuRef}>
         <button
           className="kh-bell-btn"
-          onClick={() => setShowNotifications((prev) => !prev)}
+          onClick={handleNotificationsToggle}
           aria-label="Notifications"
           aria-expanded={showNotifications}
         >

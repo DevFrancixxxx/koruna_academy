@@ -165,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <nav className="koruna-sidebar-menu">
-          {userSession.role === 'admin' || userSession.role === 'trainer' || activeTab === 'admin_suite' ? (
+          {activeTab === 'admin_suite' ? (
             <AdminSidebar
               activeTab={activeTab}
               activeInnerTab={activeInnerTab}

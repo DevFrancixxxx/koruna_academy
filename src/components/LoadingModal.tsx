@@ -5,9 +5,10 @@ import { KorunaLogoSvg } from './KorunaLogo';
 interface LoadingModalProps {
   type?: 'login' | 'signup' | 'logout' | 'academy' | 'switching';
   message?: string;
+  variant?: 'fullscreen' | 'modal';
 }
 
-export const LoadingModal: React.FC<LoadingModalProps> = ({ type = 'academy', message }) => {
+export const LoadingModal: React.FC<LoadingModalProps> = ({ type = 'academy', message, variant = 'fullscreen' }) => {
   const getDisplayText = () => {
     if (message) return message;
     switch (type) {
@@ -28,10 +29,14 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ type = 'academy', me
   const displayText = getDisplayText();
 
   return createPortal(
-    <div className="loading-modal-overlay">
-      <div className="loading-modal-container">
+    <div className={`loading-modal-overlay ${variant === 'modal' ? 'loading-modal-overlay--dialog' : ''}`}>
+      <div className={`loading-modal-container ${variant === 'modal' ? 'loading-modal-container--dialog' : ''}`}>
         <div className="loading-logo-icon">
-          <KorunaLogoSvg width={140} height={104} useGradient={true} />
+          <KorunaLogoSvg
+            width={variant === 'modal' ? 72 : 140}
+            height={variant === 'modal' ? 54 : 104}
+            useGradient={true}
+          />
         </div>
         <div className="loading-text-label">
           <span>{displayText}</span>

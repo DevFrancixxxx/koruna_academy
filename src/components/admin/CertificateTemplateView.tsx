@@ -64,7 +64,7 @@ export const CertificateTemplateView: React.FC<CertificateTemplateViewProps> = (
           <div className="as-cert-overlay" style={{ top: '31%', left: '50%', width: '68%' }}>
             <span style={{ fontSize: 'clamp(1rem, 2.5vw, 1.7rem)', fontWeight: 700, color: '#be185d', lineHeight: 1.15 }}>
               {sampleRecipient || 'Jessica Taylor'}
-            </span>
+            </span> 
           </div>
           <div className="as-cert-overlay" style={{ top: '67.2%', left: '50%', width: '65%' }}>
             <span style={{ fontSize: 'clamp(0.6rem, 1.3vw, 0.9rem)', fontWeight: 700, color: '#111827', lineHeight: 1.2 }}>

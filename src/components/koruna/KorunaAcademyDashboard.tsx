@@ -157,6 +157,72 @@ export const KorunaAcademyDashboard: React.FC<KorunaAcademyDashboardProps> = ({
     return sum;
   }, 0);
 
+  const parseDateOnly = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+  };
+
+  const getStartOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const upcomingDeadlines = userProgs
+    .filter((progress) => progress.dueDate && progress.progressPercent < 100)
+    .map((progress) => {
+      const course = courses.find((item) => item.id === progress.courseId);
+      if (!course || !progress.dueDate) return null;
+
+      const dueDate = parseDateOnly(progress.dueDate);
+      const today = getStartOfDay(new Date());
+      const daysUntilDue = Math.round((getStartOfDay(dueDate).getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+
+      let status: 'overdue' | 'due_soon' | 'upcoming' = 'upcoming';
+      if (daysUntilDue < 0) {
+        status = 'overdue';
+      } else if (daysUntilDue <= 3) {
+        status = 'due_soon';
+      }
+
+      return { course, progress, dueDate, daysUntilDue, status };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+    .slice(0, 4);
+
+  const formatDeadlineMeta = (daysUntilDue: number) => {
+    const absDays = Math.abs(daysUntilDue);
+    if (daysUntilDue < 0) return `Overdue by ${absDays} ${absDays === 1 ? 'day' : 'days'}`;
+    if (daysUntilDue === 0) return 'Due today';
+    if (daysUntilDue === 1) return 'Due tomorrow';
+    return `Due in ${daysUntilDue} days`;
+  };
+
+  const deadlineBadgeStyle = (status: 'overdue' | 'due_soon' | 'upcoming') => {
+    if (status === 'overdue') return { label: 'Overdue', backgroundColor: '#ffe4e6', color: '#e11d48' };
+    if (status === 'due_soon') return { label: 'Due soon', backgroundColor: '#ffedd5', color: '#c2410c' };
+    return { label: 'Upcoming', backgroundColor: '#cffaff', color: '#0891b2' };
+  };
+
+  const getCertificateIssueDate = (progress: UserProgress) => {
+    if (progress.lastViewedAt) return new Date(progress.lastViewedAt);
+    if (progress.dueDate) return parseDateOnly(progress.dueDate);
+    return new Date();
+  };
+
+  const formatCertificateDate = (date: Date) =>
+    date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const recentCertificates = userProgs
+    .filter((progress) => progress.progressPercent === 100)
+    .map((progress) => {
+      const course = courses.find((item) => item.id === progress.courseId);
+      if (!course || course.requiresCertification === false) return null;
+      const issuedAt = getCertificateIssueDate(progress);
+      const certificateId = `CERT-${course.id.toUpperCase()}-${progress.applicationId || issuedAt.getFullYear()}`;
+      return { course, progress, issuedAt, certificateId };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .sort((a, b) => b.issuedAt.getTime() - a.issuedAt.getTime())
+    .slice(0, 3);
+
   return (
     <div style={{ padding: '1.75rem 2rem 3rem 2rem', backgroundColor: '#f8fafc', minHeight: '100%' }}>
       {/* HEADER ROW */}
@@ -672,38 +738,64 @@ export const KorunaAcademyDashboard: React.FC<KorunaAcademyDashboardProps> = ({
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {/* Item 1 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>Compliance Quiz</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.1rem' }}>Overdue by 2 days</div>
+              {upcomingDeadlines.length > 0 ? (
+                upcomingDeadlines.map(({ course, progress, daysUntilDue, status }) => {
+                  const badge = deadlineBadgeStyle(status);
+                  return (
+                    <button
+                      key={`${course.id}-${progress.applicationId || progress.dueDate}`}
+                      type="button"
+                      onClick={() => onStartStudy(course, progress.applicationId)}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: '0.75rem',
+                        border: 'none',
+                        background: 'transparent',
+                        padding: 0,
+                        textAlign: 'left',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {course.title}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.1rem' }}>
+                          {formatDeadlineMeta(daysUntilDue)} · {progress.progressPercent}% complete
+                        </div>
+                      </div>
+                      <span style={{
+                        backgroundColor: badge.backgroundColor,
+                        color: badge.color,
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '50px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}>
+                        {badge.label}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div style={{
+                  border: '1px dashed #cbd5e1',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  color: '#64748b',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  backgroundColor: '#f8fafc'
+                }}>
+                  No upcoming deadlines.
                 </div>
-                <span style={{ backgroundColor: '#ffe4e6', color: '#e11d48', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: '50px' }}>
-                  Overdue
-                </span>
-              </div>
-
-              {/* Item 2 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>Mortgage L2 Module 4</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.1rem' }}>Due in 2 days</div>
-                </div>
-                <span style={{ backgroundColor: '#ffedd5', color: '#c2410c', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: '50px' }}>
-                  Due soon
-                </span>
-              </div>
-
-              {/* Item 3 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>Mortgage L2 Module 5</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.1rem' }}>Due in 7 days</div>
-                </div>
-                <span style={{ backgroundColor: '#cffaff', color: '#0891b2', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: '50px' }}>
-                  Upcoming
-                </span>
-              </div>
+              )}
             </div>
           </div>
 
@@ -721,15 +813,47 @@ export const KorunaAcademyDashboard: React.FC<KorunaAcademyDashboardProps> = ({
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Mortgage Basics</div>
-                <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '0.1rem' }}>Issued Jun 14, 2026</div>
-              </div>
-
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '0.65rem' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Orientation</div>
-                <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '0.1rem' }}>Issued May 2, 2026</div>
-              </div>
+              {recentCertificates.length > 0 ? (
+                recentCertificates.map(({ course, issuedAt, certificateId }, index) => (
+                  <button
+                    key={certificateId}
+                    type="button"
+                    onClick={() => onTabChange('certificates')}
+                    style={{
+                      width: '100%',
+                      border: 'none',
+                      borderTop: index === 0 ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                      padding: index === 0 ? 0 : '0.65rem 0 0 0',
+                      background: 'transparent',
+                      color: '#ffffff',
+                      textAlign: 'left',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {course.title}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '0.1rem' }}>
+                      Issued {formatCertificateDate(issuedAt)}
+                    </div>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.7, marginTop: '0.1rem', fontWeight: 700 }}>
+                      {certificateId}
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div style={{
+                  border: '1px dashed rgba(255,255,255,0.35)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  color: 'rgba(255,255,255,0.9)'
+                }}>
+                  No earned certificates yet.
+                </div>
+              )}
             </div>
           </div>
         </div>

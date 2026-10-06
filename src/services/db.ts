@@ -917,21 +917,24 @@ export const dbService = {
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase
-          .from('users')
-          .select('*');
+          .from('profiles')
+          .select('id, user_id, full_name, email, role, department, created_at');
         if (data && !error) {
           return data.map((u: any) => ({
             id: u.id,
             userId: u.user_id,
-            name: u.name,
+            name: u.full_name,
             email: u.email,
             role: u.role,
             department: u.department,
             createdAt: u.created_at
           }));
         }
+        if (error) {
+          console.warn('Supabase profiles query failed, falling back to local users:', error);
+        }
       } catch (err) {
-        console.error('Failed to get users from Supabase:', err);
+        console.error('Failed to get profiles from Supabase:', err);
       }
     }
     return getStorageItem<DatabaseUser[]>('koruna_users', DEFAULT_USERS);
@@ -945,17 +948,28 @@ export const dbService = {
 
     if (isSupabaseConfigured()) {
       try {
-        await supabase.from('users').upsert({
-          id: newUser.id,
+        const profilePayload = {
           user_id: newUser.userId,
-          name: newUser.name,
+          full_name: newUser.name,
           email: newUser.email,
           role: newUser.role,
           department: newUser.department,
           created_at: newUser.createdAt
-        });
+        };
+
+        if (newUser.id && !newUser.id.startsWith('u')) {
+          await supabase
+            .from('profiles')
+            .update(profilePayload)
+            .eq('id', newUser.id);
+        } else {
+          await supabase
+            .from('profiles')
+            .update(profilePayload)
+            .eq('email', newUser.email);
+        }
       } catch (err) {
-        console.error('Supabase saveUser failed:', err);
+        console.error('Supabase save profile failed:', err);
       }
     }
 
@@ -975,9 +989,9 @@ export const dbService = {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && isSupabaseConfigured() && user.id && !user.id.startsWith('u')) {
       try {
-        await supabase.from('users').delete().eq('id', user.id);
+        await supabase.from('profiles').delete().eq('id', user.id);
       } catch (err) {
-        console.error('Supabase delete user failed:', err);
+        console.error('Supabase delete profile failed:', err);
       }
     }
     const filtered = users.filter(u => u.email.toLowerCase() !== email.toLowerCase());
@@ -1454,7 +1468,7 @@ export const dbService = {
     return [];
   },
 
-  async assignCourseToUser(courseId: string, email: string, assignedBy?: string): Promise<void> {
+  async assignCourseToUser(courseId: string, email: string, assignedBy?: string, dueDate?: string): Promise<void> {
     const users = await this.getUsers();
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (!user) return;
@@ -1515,7 +1529,7 @@ export const dbService = {
       practicalStatus: existingProg ? existingProg.practicalStatus : 'none',
       practicalNotes: existingProg ? existingProg.practicalNotes : undefined,
       overdue: false,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      dueDate: dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       assignedBy: assignedBy || existingProg?.assignedBy
     };
 

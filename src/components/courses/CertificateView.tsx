@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Download, Share2, CheckCircle2, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Award, Download, Share2, CheckCircle2, X } from 'lucide-react';
 import type { Course } from '../../services/db';
 import type { UserSessionData } from '../../services/auth';
 
@@ -30,6 +30,7 @@ export const CertificateView: React.FC<CertificateViewProps> = ({
   const displayCertificateId = certificateId || `KA-${course?.code || 'MB'}-2026-${Math.floor(100000 + Math.random() * 900000)}`;
   const displayIssueDate = issueDate || 'June 14, 2026';
   const displayCourseTitle = course?.title || 'Senior Mortgage: VA Loan Specialist';
+  const [showDoneModal, setShowDoneModal] = useState(false);
 
   // Close on Escape key press
   useEffect(() => {
@@ -55,18 +56,79 @@ export const CertificateView: React.FC<CertificateViewProps> = ({
   };
 
   const handleDone = () => {
-    const msg = `🎉 Congratulations ${recipientName}! You have successfully completed "${displayCourseTitle}"!`;
-    if (showToast) {
-      showToast(msg);
-    } else {
-      alert(msg);
-    }
+    setShowDoneModal(true);
+  };
+
+  const handleDoneModalContinue = () => {
+    setShowDoneModal(false);
     if (onDone) {
       onDone();
     } else {
       onBack();
     }
   };
+
+  const doneModal = showDoneModal ? (
+    <div className="koruna-modal-overlay no-print" role="dialog" aria-modal="true" aria-labelledby="cert-complete-title" style={{ zIndex: 10001 }}>
+      <div
+        className="koruna-modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: '440px',
+          padding: '2rem',
+          textAlign: 'center',
+          borderRadius: '16px',
+          boxShadow: '0 24px 60px rgba(15, 23, 42, 0.24)'
+        }}
+      >
+        <div style={{
+          width: '64px',
+          height: '64px',
+          margin: '0 auto 1rem',
+          borderRadius: '50%',
+          background: '#dcfce7',
+          color: '#15803d',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(22, 163, 74, 0.18)'
+        }}>
+          <Award size={34} />
+        </div>
+        <h2 id="cert-complete-title" style={{
+          margin: '0 0 0.5rem',
+          color: '#14532d',
+          fontSize: '1.45rem',
+          fontWeight: 800,
+          fontFamily: 'var(--font-heading)'
+        }}>
+          Congratulations, {recipientName}!
+        </h2>
+        <p style={{
+          margin: '0 auto 1.5rem',
+          maxWidth: '340px',
+          color: '#475569',
+          fontSize: '0.95rem',
+          lineHeight: 1.5
+        }}>
+          You have successfully completed <strong>{displayCourseTitle}</strong>.
+        </p>
+        <button
+          type="button"
+          className="btn-koruna-solid"
+          onClick={handleDoneModalContinue}
+          style={{
+            minWidth: '170px',
+            height: '42px',
+            borderRadius: '8px',
+            fontWeight: 700
+          }}
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    </div>
+  ) : null;
 
   const certContent = (
     <>
@@ -402,47 +464,50 @@ export const CertificateView: React.FC<CertificateViewProps> = ({
 
   if (isModal) {
     return (
-      <div
-        className="koruna-modal-overlay no-print"
-        onClick={onBack}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1.5rem',
-          animation: 'fadeIn 0.2s ease-out'
-        }}
-      >
+      <>
         <div
-          className="koruna-modal-content"
-          onClick={(e) => e.stopPropagation()}
+          className="koruna-modal-overlay no-print"
+          onClick={onBack}
           style={{
-            background: '#ffffff',
-            borderRadius: '24px',
-            maxWidth: '1020px',
-            width: '100%',
-            maxHeight: '92vh',
-            overflowY: 'auto',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-            padding: '1.75rem',
-            position: 'relative',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
+            justifyContent: 'center',
+            padding: '1.5rem',
+            animation: 'fadeIn 0.2s ease-out'
           }}
         >
-          {certContent}
+          <div
+            className="koruna-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              maxWidth: '1020px',
+              width: '100%',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              padding: '1.75rem',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            {certContent}
+          </div>
         </div>
-      </div>
+        {doneModal}
+      </>
     );
   }
 
@@ -459,9 +524,7 @@ export const CertificateView: React.FC<CertificateViewProps> = ({
       padding: '2rem 1rem'
     }}>
       {certContent}
+      {doneModal}
     </div>
   );
 };
-
-
-

@@ -72,6 +72,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isLoadingAcademy, setIsLoadingAcademy] = useState(false);
+  const [completedCourseModal, setCompletedCourseModal] = useState<{ title: string } | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notificationsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -133,6 +134,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Trainer & Admin forms state
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [assignedUserEmails, setAssignedUserEmails] = useState<string[]>([]);
+  const getDefaultAssignmentDueDate = () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const [assignmentDueDate, setAssignmentDueDate] = useState<string>(() => getDefaultAssignmentDueDate());
   const [courseForm, setCourseForm] = useState({
     title: '',
     category: 'Mortgage',
@@ -287,8 +290,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const handleMarkAllNotificationsAsRead = async () => {
-    await dbService.markAllNotificationsAsRead(userSession.email);
+    if (!notifications.some(n => !n.isRead)) return;
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    await dbService.markAllNotificationsAsRead(userSession.email);
   };
 
   const handleDeleteNotification = async (e: React.MouseEvent, id: string) => {
@@ -415,14 +419,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const progressList = await dbService.getUserProgress(userSession.email);
     const prog = progressList.find(p => p.courseId === targetId && (studyingAssignmentId === null || p.applicationId === studyingAssignmentId));
     if (prog) {
-      prog.progressPercent = 100;
       const c = studyingCourse || courses.find(item => item.id === targetId);
+      const hasCourseActivity = prog.progressPercent > 0 ||
+        prog.completedLessons.length > 0 ||
+        prog.quizAttempts > 0 ||
+        prog.quizScore !== undefined ||
+        prog.practicalStatus !== 'none';
+
+      if (c?.contentType !== 'document' && !hasCourseActivity) {
+        showToast('Start the course before marking it as done.');
+        return;
+      }
+
+      prog.progressPercent = 100;
       if (c) {
         prog.learningHours = calculateCourseLearningHours(c, 100);
       }
       await dbService.saveUserProgress(prog);
       await loadPlatformData();
-      showToast(`Course completed: "${c?.title || 'Course'}" 🎉`);
+      setCompletedCourseModal({ title: c?.title || 'Course' });
     }
   };
 
@@ -565,6 +580,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       alert('Course Title and Course Code are required.');
       return;
     }
+    if (assignedUserEmails.length > 0 && !assignmentDueDate) {
+      alert('Please choose an assignment deadline before publishing.');
+      return;
+    }
 
     const isDocument = courseForm.contentType === 'document';
     const lessonsWithIds: Lesson[] = isDocument
@@ -615,7 +634,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         const isCurrentlyAssigned = !!(prog && prog.dueDate);
 
         if (shouldBeAssigned && !isCurrentlyAssigned) {
-          await dbService.assignCourseToUser(saved.id, emp.email, userSession.name);
+          await dbService.assignCourseToUser(saved.id, emp.email, userSession.name, assignmentDueDate);
+        } else if (shouldBeAssigned && isCurrentlyAssigned && prog && prog.dueDate !== assignmentDueDate) {
+          prog.dueDate = assignmentDueDate;
+          prog.overdue = false;
+          await dbService.saveUserProgress(prog);
         } else if (!shouldBeAssigned && isCurrentlyAssigned) {
           await dbService.unassignCourseFromUser(saved.id, emp.email);
         }
@@ -643,6 +666,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setCourseQuiz([]);
     setCourseModules([{ id: 'm1', title: 'Introduction' }]);
     setAssignedUserEmails([]);
+    setAssignmentDueDate(getDefaultAssignmentDueDate());
 
     await loadPlatformData();
   };
@@ -685,13 +709,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     // Find all users who are currently assigned this course
     const currentlyAssigned: string[] = [];
+    const assignedDueDates: string[] = [];
     users.filter(u => u.role === 'employee').forEach(emp => {
       const empProgList = teamProgress[emp.email.toLowerCase()] || [];
-      if (empProgList.some(p => p.courseId === course.id && p.dueDate)) {
+      const assignedProgress = empProgList.find(p => p.courseId === course.id && p.dueDate);
+      if (assignedProgress) {
         currentlyAssigned.push(emp.email);
+        if (assignedProgress.dueDate) {
+          assignedDueDates.push(assignedProgress.dueDate);
+        }
       }
     });
     setAssignedUserEmails(currentlyAssigned);
+    setAssignmentDueDate(assignedDueDates.sort()[0] || getDefaultAssignmentDueDate());
 
     setActiveInnerTab('creator');
   };
@@ -805,6 +835,68 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div style={{ position: 'fixed', top: '20px', right: '20px', background: 'var(--koruna-dark-bg)', color: '#ffffff', borderLeft: '4px solid var(--koruna-primary)', padding: '1rem 1.5rem', borderRadius: '8px', zIndex: 10000, display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: 'var(--shadow-lg)', fontWeight: 600, animation: 'fadeIn 0.2s ease' }}>
           <CheckCircle size={18} style={{ color: 'var(--koruna-primary)' }} />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {completedCourseModal && (
+        <div className="koruna-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="course-complete-title">
+          <div
+            className="koruna-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '420px',
+              padding: '2rem',
+              textAlign: 'center',
+              borderRadius: '16px',
+              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.24)'
+            }}
+          >
+            <div style={{
+              width: '64px',
+              height: '64px',
+              margin: '0 auto 1rem',
+              borderRadius: '50%',
+              background: '#dcfce7',
+              color: '#15803d',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(22, 163, 74, 0.18)'
+            }}>
+              <Award size={34} />
+            </div>
+            <h2 id="course-complete-title" style={{
+              margin: '0 0 0.5rem',
+              color: '#14532d',
+              fontSize: '1.45rem',
+              fontWeight: 800,
+              fontFamily: 'var(--font-heading)'
+            }}>
+              Congratulations!
+            </h2>
+            <p style={{
+              margin: '0 auto 1.5rem',
+              maxWidth: '320px',
+              color: '#475569',
+              fontSize: '0.95rem',
+              lineHeight: 1.5
+            }}>
+              You have successfully completed <strong>{completedCourseModal.title}</strong>.
+            </p>
+            <button
+              type="button"
+              className="btn-koruna-solid"
+              onClick={() => setCompletedCourseModal(null)}
+              style={{
+                minWidth: '150px',
+                height: '42px',
+                borderRadius: '8px',
+                fontWeight: 700
+              }}
+            >
+              Continue
+            </button>
+          </div>
         </div>
       )}
 
@@ -1607,6 +1699,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 editingCourseId={editingCourseId}
                 assignedUserEmails={assignedUserEmails}
                 setAssignedUserEmails={setAssignedUserEmails}
+                assignmentDueDate={assignmentDueDate}
+                setAssignmentDueDate={setAssignmentDueDate}
                 courseForm={courseForm}
                 setCourseForm={setCourseForm}
                 courseLessons={courseLessons}

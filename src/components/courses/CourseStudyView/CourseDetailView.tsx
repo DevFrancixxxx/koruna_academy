@@ -123,6 +123,15 @@ export const CourseDetailView: React.FC<CourseDetailViewProps> = ({
   const totalModules = modules.length;
   const completedModulesCount = modules.filter(m => moduleStatuses[m.id] === 'completed').length;
   const progressPercent = currentProgress?.progressPercent || 0;
+  const hasCourseActivity = Boolean(
+    currentProgress && (
+      currentProgress.progressPercent > 0 ||
+      currentProgress.completedLessons.length > 0 ||
+      currentProgress.quizAttempts > 0 ||
+      currentProgress.quizScore !== undefined ||
+      currentProgress.practicalStatus !== 'none'
+    )
+  );
 
   // Banner Background/Styling (Koruna Burgundy)
   const burgundyThemeColor = '#a82c5d';
@@ -416,7 +425,7 @@ export const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                   {progressPercent}% complete
                 </div>
 
-                {progressPercent < 100 ? (
+                {progressPercent < 100 && hasCourseActivity ? (
                   <button
                     id="mark-course-done-btn"
                     onClick={() => handleMarkCourseComplete && handleMarkCourseComplete(studyingCourse.id)}
@@ -441,7 +450,7 @@ export const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                     <CheckCircle2 size={16} />
                     <span>Mark Course as Done</span>
                   </button>
-                ) : (
+                ) : progressPercent >= 100 ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{
                       background: '#dcfce7',
@@ -474,7 +483,7 @@ export const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                       </button>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
 

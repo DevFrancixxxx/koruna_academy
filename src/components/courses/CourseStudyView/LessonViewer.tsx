@@ -29,7 +29,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
 }) => {
   const [selectedResource, setSelectedResource] = useState<ResourceFile | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState<boolean>(true);
-  const [isSubmittingDone, setIsSubmittingDone] = useState<boolean>(false);
+  const [isProcessingNext, setIsProcessingNext] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
@@ -187,10 +187,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
   const isLastLesson = activeLessonIdx === studyingCourse.lessons.length - 1;
 
   const handleNextClick = async () => {
-    if (isSubmittingDone) return;
+    if (isProcessingNext) return;
 
+    setIsProcessingNext(true);
     if (isLastLesson && !hasQuiz) {
-      setIsSubmittingDone(true);
       try {
         if (!isCompleted) {
           await handleMarkLessonComplete(lesson.id);
@@ -207,13 +207,19 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
       } catch (err) {
         console.error('Error finishing course:', err);
       } finally {
-        setIsSubmittingDone(false);
+        setIsProcessingNext(false);
       }
     } else {
-      if (!isCompleted) {
-        await handleMarkLessonComplete(lesson.id);
+      try {
+        if (!isCompleted) {
+          await handleMarkLessonComplete(lesson.id);
+        }
+        setActiveLessonIdx(prev => prev + 1);
+      } catch (err) {
+        console.error('Error moving to next lesson:', err);
+      } finally {
+        setIsProcessingNext(false);
       }
-      setActiveLessonIdx(prev => prev + 1);
     }
   };
 
@@ -231,9 +237,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
       gap: '1.75rem',
       width: '100%'
     }}>
-      {/* Loading Modal Overlay when clicking Done */}
-      {isSubmittingDone && (
-        <LoadingModal message="Finalizing course & saving progress..." />
+      {/* Loading Modal Overlay while saving lesson progress */}
+      {isProcessingNext && (
+        <LoadingModal
+          variant="modal"
+          message={(isLastLesson && !hasQuiz) ? 'Finalizing course & saving progress...' : 'Saving progress & loading next lesson...'}
+        />
       )}
       {/* Video Viewport Section */}
       {parsedVideo && (
@@ -653,7 +662,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
       }}>
         <button
           className="btn-koruna-outline"
-          disabled={activeLessonIdx === 0}
+          disabled={activeLessonIdx === 0 || isProcessingNext}
           onClick={handlePreviousClick}
           style={{
             display: 'inline-flex',
@@ -665,7 +674,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
             borderRadius: '8px',
             fontSize: '0.9rem',
             fontWeight: 600,
-            cursor: activeLessonIdx === 0 ? 'not-allowed' : 'pointer'
+            cursor: activeLessonIdx === 0 || isProcessingNext ? 'not-allowed' : 'pointer'
           }}
         >
           <ChevronLeft size={16} />
@@ -674,7 +683,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
 
         <button
           className="btn-koruna-solid"
-          disabled={isSubmittingDone}
+          disabled={isProcessingNext}
           onClick={handleNextClick}
           style={{
             display: 'inline-flex',
@@ -686,8 +695,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({
             borderRadius: '8px',
             fontSize: '0.9rem',
             fontWeight: 600,
-            cursor: isSubmittingDone ? 'wait' : 'pointer',
-            opacity: isSubmittingDone ? 0.7 : 1,
+            cursor: isProcessingNext ? 'wait' : 'pointer',
+            opacity: isProcessingNext ? 0.7 : 1,
             background: (isLastLesson && !hasQuiz) ? '#10b981' : undefined,
             borderColor: (isLastLesson && !hasQuiz) ? '#10b981' : undefined
           }}
