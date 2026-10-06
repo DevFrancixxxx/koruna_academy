@@ -98,9 +98,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     const matchedRole = DEMO_ROLES[email.toLowerCase()];
 
     onLoginSuccess({
+      ...result.data,
       name: matchedRole ? matchedRole.name : result.data.name,
-      role: matchedRole ? matchedRole.role : result.data.role,
-      email: result.data.email
+      role: matchedRole ? matchedRole.role : result.data.role
     });
   };
 
@@ -322,4 +322,3 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     </>
   );
 };
-

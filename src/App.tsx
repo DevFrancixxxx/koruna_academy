@@ -3,6 +3,7 @@ import { LoginPageView } from './components/LoginPageView';
 import { SignupPageView } from './components/SignupPageView';
 import { DashboardView } from './components/DashboardView';
 import { SessionWarningModal } from './components/SessionWarningModal';
+import { LoadingModal } from './components/LoadingModal';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import {
   getCurrentUserSession,
@@ -55,6 +56,14 @@ export function App() {
 
   const [userSession, setUserSession] = useState<UserSessionData | null>(null);
   const [sessionExpiredNotice, setSessionExpiredNotice] = useState<string | null>(null);
+  const [hasCheckedAuthSession, setHasCheckedAuthSession] = useState(false);
+
+  const getDefaultTabForUser = (user: UserSessionData, savedTab: ActiveTabType | null): ActiveTabType => {
+    if ((user.role === 'trainer' || user.role === 'admin') && (!savedTab || savedTab === 'dashboard')) {
+      return 'admin_suite';
+    }
+    return savedTab || 'dashboard';
+  };
 
   // Check for persisted expiration notice on initial load
   useEffect(() => {
@@ -97,14 +106,16 @@ export function App() {
   useEffect(() => {
     // Check if user has an active Supabase session on mount
     async function checkSession() {
-      const activeUser = await getCurrentUserSession();
-      if (activeUser) {
-        setUserSession(activeUser);
-        setCurrentView('dashboard');
-        const savedTab = localStorage.getItem('koruna_active_tab') as ActiveTabType | null;
-        if (!savedTab) {
-          setActiveTab(activeUser.role === 'trainer' || activeUser.role === 'admin' ? 'admin_suite' : 'dashboard');
+      try {
+        const activeUser = await getCurrentUserSession();
+        if (activeUser) {
+          setUserSession(activeUser);
+          setCurrentView('dashboard');
+          const savedTab = localStorage.getItem('koruna_active_tab') as ActiveTabType | null;
+          setActiveTab(getDefaultTabForUser(activeUser, savedTab));
         }
+      } finally {
+        setHasCheckedAuthSession(true);
       }
     }
     checkSession();
@@ -115,9 +126,7 @@ export function App() {
         setUserSession(user);
         setCurrentView('dashboard');
         const savedTab = localStorage.getItem('koruna_active_tab') as ActiveTabType | null;
-        if (!savedTab) {
-          setActiveTab(user.role === 'trainer' || user.role === 'admin' ? 'admin_suite' : 'dashboard');
-        }
+        setActiveTab(getDefaultTabForUser(user, savedTab));
         setSessionExpiredNotice(null);
         setSessionExpiredFlag(false);
       } else {
@@ -135,9 +144,7 @@ export function App() {
     setUserSession(user);
     setCurrentView('dashboard');
     const savedTab = localStorage.getItem('koruna_active_tab') as ActiveTabType | null;
-    if (!savedTab) {
-      setActiveTab(user.role === 'trainer' || user.role === 'admin' ? 'admin_suite' : 'dashboard');
-    }
+    setActiveTab(getDefaultTabForUser(user, savedTab));
     setSessionExpiredNotice(null);
     setSessionExpiredFlag(false);
   };
@@ -165,8 +172,10 @@ export function App() {
         onLogout={logoutNow}
       />
 
+      {!hasCheckedAuthSession && <LoadingModal type="academy" />}
+
       {/* View Router */}
-      {currentView === 'login' && (
+      {hasCheckedAuthSession && currentView === 'login' && (
         <LoginPageView
           onNavigateSignup={() => setCurrentView('signup')}
           onLoginSuccess={handleAuthSuccess}
@@ -178,14 +187,14 @@ export function App() {
         />
       )}
 
-      {currentView === 'signup' && (
+      {hasCheckedAuthSession && currentView === 'signup' && (
         <SignupPageView
           onNavigateLogin={() => setCurrentView('login')}
           onSignupSuccess={handleAuthSuccess}
         />
       )}
 
-      {currentView === 'dashboard' && userSession && (
+      {hasCheckedAuthSession && currentView === 'dashboard' && userSession && (
         <DashboardView
           userSession={userSession}
           activeTab={activeTab}
@@ -198,4 +207,3 @@ export function App() {
 }
 
 export default App;
-

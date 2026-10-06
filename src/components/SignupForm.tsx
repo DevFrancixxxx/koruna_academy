@@ -38,11 +38,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onNavig
   const [sendUpdates, setSendUpdates] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [showDevOptions, setShowDevOptions] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setInfoMsg(null);
 
     if (!fullName.trim()) {
       setErrorMsg('Please enter your full name.');
@@ -66,8 +68,19 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onNavig
     }
     setIsLoading(false);
 
-    if (!result.success || !result.data) {
+    if (!result.success) {
       setErrorMsg(result.error || 'Registration failed. Please try again.');
+      return;
+    }
+
+    if (result.requiresEmailConfirmation) {
+      setInfoMsg('Account created. Please check your email and confirm your account before logging in.');
+      setPassword('');
+      return;
+    }
+
+    if (!result.data) {
+      setErrorMsg('Account was created, but the app could not start a session. Please log in.');
       return;
     }
 
@@ -77,6 +90,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onNavig
   const handleSSO = async (provider: 'google' | 'azure') => {
     setIsLoading(true);
     setErrorMsg(null);
+    setInfoMsg(null);
     const startTime = Date.now();
     const result = await signInWithSSO(provider, {
       role,
@@ -113,6 +127,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onNavig
         <div style={{ padding: '0.65rem 0.85rem', background: '#fce8e6', border: '1px solid #ea4335', color: '#c5221f', fontSize: '0.85rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '6px' }}>
           <AlertCircle size={16} style={{ flexShrink: 0 }} />
           <span style={{ fontWeight: 600 }}>{errorMsg}</span>
+        </div>
+      )}
+
+      {infoMsg && (
+        <div style={{ padding: '0.65rem 0.85rem', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', fontSize: '0.85rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '6px' }}>
+          <Info size={16} style={{ flexShrink: 0 }} />
+          <span style={{ fontWeight: 600 }}>{infoMsg}</span>
         </div>
       )}
 

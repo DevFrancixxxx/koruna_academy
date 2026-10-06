@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { dbService } from './db';
+import type { User } from '@supabase/supabase-js';
 
 export type UserRole = 'employee' | 'team_leader' | 'trainer' | 'admin';
 
@@ -9,6 +10,68 @@ export interface UserSessionData {
   role: UserRole;
   email: string;
   department?: string;
+}
+
+interface AuthResult {
+  success: boolean;
+  data?: UserSessionData;
+  error?: string;
+  requiresEmailConfirmation?: boolean;
+}
+
+const USER_ROLES: UserRole[] = ['employee', 'team_leader', 'trainer', 'admin'];
+
+function isUserRole(value: unknown): value is UserRole {
+  return typeof value === 'string' && USER_ROLES.includes(value as UserRole);
+}
+
+async function getSessionDataFromSupabaseUser(user: User): Promise<UserSessionData> {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('full_name, email, role, department')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Failed to load user profile; falling back to auth metadata:', error);
+  }
+
+  const metadata = user.user_metadata || {};
+  const profileRole = profile?.role;
+  const metadataRole = metadata.role;
+  const role = isUserRole(profileRole)
+    ? profileRole
+    : isUserRole(metadataRole)
+      ? metadataRole
+      : 'employee';
+
+  return {
+    id: user.id,
+    name: profile?.full_name || metadata.full_name || user.email?.split('@')[0] || 'User',
+    role,
+    email: profile?.email || user.email || '',
+    department: profile?.department || metadata.department
+  };
+}
+
+async function upsertUserProfile(
+  userId: string,
+  email: string,
+  fullName: string,
+  department: string,
+  role: UserRole
+): Promise<string | null> {
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      full_name: fullName,
+      email,
+      role,
+      department
+    }, { onConflict: 'id' });
+
+  return error?.message || null;
 }
 
 export const DEFAULT_INACTIVITY_TIMEOUT_MINUTES = 15;
@@ -91,11 +154,14 @@ export async function signUpUser(
   fullName: string,
   department: string,
   role: UserRole = 'employee'
-): Promise<{ success: boolean; data?: UserSessionData; error?: string }> {
+): Promise<AuthResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedFullName = fullName.trim();
+
   // Check if email already exists
   try {
     const users = await dbService.getUsers();
-    const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+    const emailExists = users.some(u => u.email.toLowerCase() === normalizedEmail);
     if (emailExists) {
       return { success: false, error: 'This email address is already registered.' };
     }
@@ -107,9 +173,9 @@ export async function signUpUser(
     // Demo mode fallback
     const newUser = {
       id: `u-${Date.now()}`,
-      name: fullName,
+      name: normalizedFullName,
       role: role,
-      email: email,
+      email: normalizedEmail,
       department,
       createdAt: new Date().toISOString().split('T')[0]
     };
@@ -119,20 +185,21 @@ export async function signUpUser(
       success: true,
       data: {
         id: newUser.id,
-        name: fullName,
+        name: normalizedFullName,
         role: role,
-        email: email,
+        email: normalizedEmail,
         department
       }
     };
   }
 
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: normalizedEmail,
     password: pass,
     options: {
+      emailRedirectTo: window.location.origin,
       data: {
-        full_name: fullName,
+        full_name: normalizedFullName,
         department: department,
         role: role
       }
@@ -145,12 +212,22 @@ export async function signUpUser(
 
   // Save profile mapping details in local storage for consistency
   if (data.user?.id) {
+    if (data.session) {
+      const profileError = await upsertUserProfile(data.user.id, normalizedEmail, normalizedFullName, department, role);
+      if (profileError) {
+        return {
+          success: false,
+          error: `Account was created, but the profile could not be saved: ${profileError}`
+        };
+      }
+    }
+
     try {
       await dbService.saveUser({
         id: data.user.id,
-        name: fullName,
+        name: normalizedFullName,
         role: role,
-        email: email,
+        email: normalizedEmail,
         department: department,
         createdAt: new Date().toISOString().split('T')[0]
       });
@@ -159,13 +236,20 @@ export async function signUpUser(
     }
   }
 
+  if (!data.session) {
+    return {
+      success: true,
+      requiresEmailConfirmation: true
+    };
+  }
+
   return {
     success: true,
     data: {
       id: data.user?.id,
-      name: fullName,
+      name: normalizedFullName,
       role: role,
-      email,
+      email: normalizedEmail,
       department
     }
   };
@@ -184,7 +268,7 @@ const DEMO_PRESETS: Record<string, { name: string; role: UserRole; department: s
 export async function signInUser(
   email: string,
   pass: string
-): Promise<{ success: boolean; data?: UserSessionData; error?: string }> {
+): Promise<AuthResult> {
   if (!isSupabaseConfigured()) {
     // Demo mode fallback
     const emailLower = email.toLowerCase();
@@ -211,29 +295,19 @@ export async function signInUser(
     return { success: false, error: error.message };
   }
 
-  // Fetch profile details
-  let name = email.split('@')[0];
-  let role: UserRole = 'employee';
-
   if (data.user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-
-    if (profile) {
-      name = profile.full_name || name;
-      role = (profile.role as UserRole) || role;
-    }
+    const userSession = await getSessionDataFromSupabaseUser(data.user);
+    return {
+      success: true,
+      data: userSession
+    };
   }
 
   return {
     success: true,
     data: {
-      id: data.user?.id,
-      name,
-      role,
+      name: email.split('@')[0],
+      role: 'employee',
       email
     }
   };
@@ -300,20 +374,7 @@ export async function getCurrentUserSession(): Promise<UserSessionData | null> {
   const { data } = await supabase.auth.getSession();
   if (!data.session?.user) return null;
 
-  const user = data.session.user;
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  return {
-    id: user.id,
-    name: profile?.full_name || user.email?.split('@')[0] || 'User',
-    role: (profile?.role as UserRole) || 'employee',
-    email: user.email || '',
-    department: profile?.department
-  };
+  return getSessionDataFromSupabaseUser(data.session.user);
 }
 
 /**
@@ -324,20 +385,7 @@ export function subscribeToAuthChanges(callback: (user: UserSessionData | null) 
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
     if (session?.user) {
-      const user = session.user;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      callback({
-        id: user.id,
-        name: profile?.full_name || user.email?.split('@')[0] || 'User',
-        role: (profile?.role as UserRole) || 'employee',
-        email: user.email || '',
-        department: profile?.department
-      });
+      callback(await getSessionDataFromSupabaseUser(session.user));
     } else {
       callback(null);
     }
